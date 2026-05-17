@@ -49,7 +49,7 @@ export const products: Product[] = [
     category: "Salchipapas",
     description: "Papas fritas, salchicha y queso cheddar fundido.",
     price: 5,
-    image: "/salchipapasencilla.png",
+    image: "/salchipapa.png",
   },
   {
     id: 5,
