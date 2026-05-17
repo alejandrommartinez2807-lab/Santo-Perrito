@@ -1,130 +1,128 @@
 export type Product = {
   id: number
   name: string
-  category: "Perros" | "Delicias" | "Bebidas"
+  category: "Perritos" | "Salchipapas" | "Raciones" | "Delicias" | "Bebidas"
   description: string
   price: number
   image: string
 }
 
-export const categories = ["Todos", "Perros", "Delicias", "Bebidas"]
+export const categories = [
+  "Todos",
+  "Perritos",
+  "Salchipapas",
+  "Raciones",
+  "Delicias",
+  "Bebidas",
+]
 
 export const products: Product[] = [
   {
     id: 1,
-    name: "Perro Normal",
-    category: "Perros",
+    name: "Clásico",
+    category: "Perritos",
     description:
-      "Perro caliente clásico con pan suave, salchicha, salsas y toppings tradicionales.",
+      "Pan, salchicha, papas, cebolla, ensalada, maíz, queso amarillo y salsas de la casa.",
     price: 3,
-    image: "/perrosnormales.png",
+    image: "/perroclasico.png",
   },
   {
     id: 2,
-    name: "Perro Especial",
-    category: "Perros",
+    name: "Santo Cachón",
+    category: "Perritos",
     description:
-      "Perro caliente más cargado, con queso, papitas, salsas y el toque especial de Santo Perrito.",
-    price: 4.5,
-    image: "/perros-especiales.png",
+      "Pan, doble salchicha, papas, cebolla, ensalada, maíz, tocineta, queso amarillo y salsas de la casa.",
+    price: 3.5,
+    image: "/Santocachon.png",
   },
   {
     id: 3,
-    name: "Pepito",
-    category: "Perros",
+    name: "Santo Perrito",
+    category: "Perritos",
     description:
-      "Pepito con pan tostado, proteína, salsas y una combinación fuerte para resolver el antojo.",
-    price: 6,
-    image: "/pepito.png",
+      "Pan, salchicha, papas, cebolla, salsa de la casa al estilo ranch, salsa estrella a base de tocineta y parmesano, tocineta, queso amarillo o parmesano.",
+    price: 3.5,
+    image: "/Santoperrito.png",
   },
   {
     id: 4,
-    name: "Salchipapa",
-    category: "Delicias",
+    name: "Salchipapa Sencilla",
+    category: "Salchipapas",
     description:
-      "Papas con salchicha, salsas y toppings. Una opción perfecta para compartir o comer completo.",
+      "Papas fritas, salchicha y queso cheddar fundido.",
     price: 5,
-    image: "/salchipapa.png",
+    image: "/salchipapaespecial.png",
   },
   {
     id: 5,
-    name: "Papas Fritas",
-    category: "Delicias",
+    name: "Salchipapa Especial",
+    category: "Salchipapas",
     description:
-      "Papas doradas, crujientes y listas para acompañar tu pedido.",
-    price: 3,
-    image: "/papasfritas.png",
+      "Papas fritas, salchicha, tocineta, queso cheddar y queso amarillo.",
+    price: 7,
+    image: "/salchipapaespecial.png",
   },
   {
     id: 6,
-    name: "Nuggets",
+    name: "Nuggets de Pollo",
     category: "Delicias",
     description:
-      "Nuggets crujientes, ideales para acompañar con salsas y bebidas frías.",
-    price: 4,
-    image: "/nugets.png",
+      "Nuggets de pollo acompañados con papas fritas.",
+    price: 5,
+    image: "/nuggetspollo.png",
   },
   {
     id: 7,
-    name: "Tequeños",
-    category: "Delicias",
+    name: "Ración de Papas Fritas",
+    category: "Raciones",
     description:
-      "Tequeños dorados y crujientes, perfectos para picar o acompañar tu comida.",
-    price: 4,
-    image: "/tequeno.png",
+      "Ración de papas fritas doradas y crujientes para acompañar tu pedido.",
+    price: 3,
+    image: "/nuggetspollo.png",
   },
   {
     id: 8,
-    name: "Yukery",
+    name: "Refresco Botella",
     category: "Bebidas",
     description:
-      "Jugo Yukery frío para acompañar tu perro o tus delicias favoritas.",
-    price: 2,
-    image: "/jugoyukeri.png",
-  },
-  {
-    id: 9,
-    name: "Refresco Pequeño",
-    category: "Bebidas",
-    description:
-      "Refresco pequeño frío para acompañar tu pedido.",
-    price: 1.5,
+      "Refresco frío en botella para acompañar tu pedido.",
+    price: 1,
     image: "/refresco-pequeno.png",
   },
   {
-    id: 10,
-    name: "Refresco 1 Litro",
+    id: 9,
+    name: "Refresco 1LT",
     category: "Bebidas",
     description:
       "Refresco de 1 litro ideal para compartir.",
-    price: 2.5,
+    price: 2,
     image: "/refresco1litros.png",
   },
   {
-    id: 11,
-    name: "Refresco 1.5 Litros",
+    id: 10,
+    name: "Nestea",
     category: "Bebidas",
     description:
-      "Refresco de 1.5 litros para acompañar varios pedidos.",
+      "Té frío Nestea para acompañar tu comida.",
     price: 3,
-    image: "/refresco1,5litros.png",
+    image: "/refresco1.5litros.png",
+  },
+  {
+    id: 11,
+    name: "Malta",
+    category: "Bebidas",
+    description:
+      "Malta fría para acompañar tu pedido.",
+    price: 1,
+    image: "/telipton.png",
   },
   {
     id: 12,
-    name: "Refresco 2 Litros",
+    name: "Agua",
     category: "Bebidas",
     description:
-      "Refresco de 2 litros, perfecto para compartir en grupo.",
-    price: 4,
-    image: "/refresco2litros.png",
-  },
-  {
-    id: 13,
-    name: "Té Lipton",
-    category: "Bebidas",
-    description:
-      "Té frío Lipton para acompañar tu comida con algo refrescante.",
-    price: 2.5,
-    image: "/telipton.png",
+      "Agua fría para refrescarte y acompañar tu comida.",
+    price: 1.5,
+    image: "/jugoyukeri.png",
   },
 ]
