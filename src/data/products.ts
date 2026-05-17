@@ -125,8 +125,8 @@ export const products: Product[] = [
     id: 12,
     name: "Nestea",
     category: "Bebidas",
-    description: "Té frío para acompañar tu comida.",
+    description: "Bebida refrescante venezolana.",
     price: 3,
-    image: "/telipton.png",
+    image: "/nete.png",
   },
 ]
