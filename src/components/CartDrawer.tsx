@@ -90,8 +90,19 @@ export default function CartDrawer({
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false)
   const [orderError, setOrderError] = useState<string | null>(null)
 
-  const totalVES = totalPrice * exchangeRate
   const hasItems = items.length > 0
+
+  const comboTotalPrice = items
+    .filter((item) => item.category === "Combos")
+    .reduce((total, item) => total + item.price * item.quantity, 0)
+
+  const regularTotalPrice = items
+    .filter((item) => item.category !== "Combos")
+    .reduce((total, item) => total + item.price * item.quantity, 0)
+
+  const regularTotalVES = regularTotalPrice * exchangeRate
+  const hasCombos = comboTotalPrice > 0
+  const hasRegularProducts = regularTotalPrice > 0
 
   const sourceLabel = exchangeSource || "BCV"
   const isOfficialBcv = sourceLabel === "BCV" && !exchangeFallback
@@ -103,10 +114,15 @@ export default function CartDrawer({
     const lines = items.map((item) => {
       const subtotal = item.price * item.quantity
       const subtotalVES = subtotal * exchangeRate
+      const isCombo = item.category === "Combos"
 
-      const baseLine = `• ${item.name} x${item.quantity} — ${formatUSD(
-        subtotal
-      )} / Bs ${formatVES(subtotalVES)}`
+      const baseLine = isCombo
+        ? `• ${item.name} x${item.quantity} — ${formatUSD(
+            subtotal
+          )} / Pago en divisas`
+        : `• ${item.name} x${item.quantity} — ${formatUSD(
+            subtotal
+          )} / Bs ${formatVES(subtotalVES)}`
 
       if (item.noteEnabled && item.note?.trim()) {
         return `${baseLine}\n  Nota: ${item.note.trim()}`
@@ -124,9 +140,15 @@ export default function CartDrawer({
     return encodeURIComponent(
       `Hola, quiero hacer este pedido en Santo Perrito:\n\n${lines.join(
         "\n"
-      )}\n\nTotal: ${formatUSD(totalPrice)}\nAprox. Bs ${formatVES(
-        totalVES
-      )}\n\nTasa usada: Bs ${formatVES(exchangeRate)}\n${sourceLine}`
+      )}\n\nTotal en divisas: ${formatUSD(totalPrice)}${
+        hasRegularProducts
+          ? `\nProductos normales aprox.: Bs ${formatVES(regularTotalVES)}`
+          : ""
+      }${
+        hasCombos
+          ? `\nCombos: solo pago en divisas.`
+          : ""
+      }\n\nTasa usada: Bs ${formatVES(exchangeRate)}\n${sourceLine}`
     )
   }
 
@@ -153,6 +175,9 @@ export default function CartDrawer({
           exchangeRate,
           exchangeSource,
           exchangeValueDate,
+          comboTotalPrice,
+          regularTotalPrice,
+          regularTotalVES,
         }),
       })
 
@@ -286,6 +311,7 @@ export default function CartDrawer({
               {items.map((item) => {
                 const itemSubtotal = item.price * item.quantity
                 const itemSubtotalVES = itemSubtotal * exchangeRate
+                const isCombo = item.category === "Combos"
                 const canUseNotes = item.category !== "Bebidas"
 
                 return (
@@ -357,9 +383,15 @@ export default function CartDrawer({
                               {formatUSD(itemSubtotal)}
                             </p>
 
-                            <p className="mt-1 text-xs font-black text-[#3a0000]/65">
-                              Bs {formatVES(itemSubtotalVES)}
-                            </p>
+                            {isCombo ? (
+                              <p className="mt-1 text-[0.65rem] font-black uppercase tracking-[0.08em] text-[#a00000]">
+                                Pago en divisas
+                              </p>
+                            ) : (
+                              <p className="mt-1 text-xs font-black text-[#3a0000]/65">
+                                Bs {formatVES(itemSubtotalVES)}
+                              </p>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -407,12 +439,20 @@ export default function CartDrawer({
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <p className="text-xs font-black uppercase tracking-[0.18em] text-[#a00000]">
-                    Total
+                    Total en divisas
                   </p>
 
-                  <p className="mt-1 text-xs font-black text-[#3a0000]/70">
-                    Bs {formatVES(totalVES)}
-                  </p>
+                  {hasRegularProducts && (
+                    <p className="mt-1 text-xs font-black text-[#3a0000]/70">
+                      Productos normales: Bs {formatVES(regularTotalVES)}
+                    </p>
+                  )}
+
+                  {!hasRegularProducts && hasCombos && (
+                    <p className="mt-1 text-xs font-black uppercase tracking-[0.08em] text-[#a00000]">
+                      Combos: solo divisas
+                    </p>
+                  )}
                 </div>
 
                 <p className="text-3xl font-black leading-none text-[#a00000] drop-shadow-[0_3px_0_rgba(255,211,0,0.75)]">
@@ -420,42 +460,52 @@ export default function CartDrawer({
                 </p>
               </div>
 
-              <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl border-2 border-[#a00000] bg-white px-3 py-2">
-                <div className="min-w-0">
-                  <p className="text-[0.62rem] font-black uppercase tracking-[0.2em] text-[#a00000]">
-                    Tasa Euro BCV
-                  </p>
-
-                  <p className="mt-0.5 truncate text-[0.68rem] font-bold text-[#3a0000]/65">
-                    {exchangeValueDate
-                      ? `Fecha valor: ${exchangeValueDate}`
-                      : "Fecha valor no disponible"}
+              {hasCombos && (
+                <div className="mt-3 rounded-2xl border-2 border-[#a00000]/25 bg-white px-3 py-2">
+                  <p className="text-[0.68rem] font-black uppercase tracking-[0.12em] text-[#a00000]">
+                    Los combos se pagan únicamente en divisas.
                   </p>
                 </div>
+              )}
 
-                <div className="shrink-0 text-right">
-                  <span
-                    className={`mb-1 inline-flex items-center gap-1 rounded-full border border-yellow-300 px-2 py-0.5 text-[0.55rem] font-black uppercase tracking-[0.1em] ${
-                      isOfficialBcv
-                        ? "bg-yellow-300 text-[#4a0000]"
-                        : "bg-orange-400 text-[#4a0000]"
-                    }`}
-                  >
-                    {isOfficialBcv ? (
-                      <BadgeCheck size={11} />
-                    ) : (
-                      <AlertTriangle size={11} />
-                    )}
-                    {sourceLabel}
-                  </span>
+              {hasRegularProducts && (
+                <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl border-2 border-[#a00000] bg-white px-3 py-2">
+                  <div className="min-w-0">
+                    <p className="text-[0.62rem] font-black uppercase tracking-[0.2em] text-[#a00000]">
+                      Tasa Euro BCV
+                    </p>
 
-                  <p className="text-base font-black leading-none text-[#220000]">
-                    Bs {formatVES(exchangeRate)}
-                  </p>
+                    <p className="mt-0.5 truncate text-[0.68rem] font-bold text-[#3a0000]/65">
+                      {exchangeValueDate
+                        ? `Fecha valor: ${exchangeValueDate}`
+                        : "Fecha valor no disponible"}
+                    </p>
+                  </div>
+
+                  <div className="shrink-0 text-right">
+                    <span
+                      className={`mb-1 inline-flex items-center gap-1 rounded-full border border-yellow-300 px-2 py-0.5 text-[0.55rem] font-black uppercase tracking-[0.1em] ${
+                        isOfficialBcv
+                          ? "bg-yellow-300 text-[#4a0000]"
+                          : "bg-orange-400 text-[#4a0000]"
+                      }`}
+                    >
+                      {isOfficialBcv ? (
+                        <BadgeCheck size={11} />
+                      ) : (
+                        <AlertTriangle size={11} />
+                      )}
+                      {sourceLabel}
+                    </span>
+
+                    <p className="text-base font-black leading-none text-[#220000]">
+                      Bs {formatVES(exchangeRate)}
+                    </p>
+                  </div>
                 </div>
-              </div>
+              )}
 
-              {exchangeWarning && (
+              {exchangeWarning && hasRegularProducts && (
                 <div className="mt-2 rounded-xl border border-orange-400/35 bg-orange-100 px-3 py-2">
                   <p className="text-[0.68rem] font-bold leading-4 text-[#7a2e00]">
                     {exchangeWarning}
