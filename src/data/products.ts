@@ -92,7 +92,7 @@ export const products: Product[] = [
     category: "Raciones",
     description: "Nuggets de pollo con papas fritas.",
     price: 5,
-    image: "/nugetspollo.png",
+    image: "/nuggetspollo.png",
   },
   {
     id: 9,
@@ -123,26 +123,10 @@ export const products: Product[] = [
   },
   {
     id: 12,
-    name: "Refresco 1.5LT",
-    category: "Bebidas",
-    description: "Refresco de 1.5 litros para acompañar tu comida.",
-    price: 2.5,
-    image: "/refresco1.5litros.png",
-  },
-  {
-    id: 13,
-    name: "Refresco 2LT",
-    category: "Bebidas",
-    description: "Refresco de 2 litros ideal para compartir.",
-    price: 3,
-    image: "/refresco2litros.png",
-  },
-  {
-    id: 14,
     name: "Nestea",
     category: "Bebidas",
-    description: "Deliciosa bebida venezolana.",
+    description: "Té frío para acompañar tu comida.",
     price: 3,
-    image: "/nete.png",
+    image: "/telipton.png",
   },
 ]
