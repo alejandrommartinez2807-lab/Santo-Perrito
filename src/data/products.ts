@@ -51,7 +51,7 @@ export const products: Product[] = [
     description:
       "Papas fritas, salchicha y queso cheddar fundido.",
     price: 5,
-    image: "/salchipapaespecial.png",
+    image: "/salchipapa.png",
   },
   {
     id: 5,
@@ -69,7 +69,7 @@ export const products: Product[] = [
     description:
       "Nuggets de pollo acompañados con papas fritas.",
     price: 5,
-    image: "/nuggetspollo.png",
+    image: "/nugetspollo.png",
   },
   {
     id: 7,
@@ -78,7 +78,7 @@ export const products: Product[] = [
     description:
       "Ración de papas fritas doradas y crujientes para acompañar tu pedido.",
     price: 3,
-    image: "/nuggetspollo.png",
+    image: "/nugetspollo.png",
   },
   {
     id: 8,
@@ -103,9 +103,9 @@ export const products: Product[] = [
     name: "Nestea",
     category: "Bebidas",
     description:
-      "Té frío Nestea para acompañar tu comida.",
+      "Té frío para acompañar tu comida.",
     price: 3,
-    image: "/refresco1.5litros.png",
+    image: "/nete.png",
   },
   {
     id: 11,
@@ -114,7 +114,7 @@ export const products: Product[] = [
     description:
       "Malta fría para acompañar tu pedido.",
     price: 1,
-    image: "/telipton.png",
+    image: "/malta.png",
   },
   {
     id: 12,
