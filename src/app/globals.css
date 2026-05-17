@@ -1,0 +1,50 @@
+@import "tailwindcss";
+
+:root {
+  --bambucha-black: #050101;
+  --bambucha-black-soft: #120404;
+  --bambucha-red: #dc1717;
+  --bambucha-red-dark: #740909;
+  --bambucha-orange: #ff7a00;
+  --bambucha-yellow: #ffd23c;
+  --bambucha-cream: #fff1cf;
+  --bambucha-muted: #c9a875;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(circle at top, rgba(255, 122, 0, 0.18), transparent 35%),
+    linear-gradient(180deg, #120404 0%, #050101 45%, #000000 100%);
+  color: white;
+}
+
+::selection {
+  background: var(--bambucha-orange);
+  color: black;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #050101;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(
+    180deg,
+    var(--bambucha-red),
+    var(--bambucha-orange)
+  );
+  border-radius: 999px;
+}
