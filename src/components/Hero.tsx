@@ -19,12 +19,12 @@ export default function Hero() {
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_16%,rgba(255,220,70,0.55),transparent_28%),radial-gradient(circle_at_82%_45%,rgba(255,184,8,0.28),transparent_34%),radial-gradient(circle_at_15%_78%,rgba(0,0,0,0.38),transparent_38%)]" />
       <div className="absolute inset-x-0 bottom-0 h-52 bg-gradient-to-t from-[#2b0000]/80 to-transparent" />
 
-      <div className="relative mx-auto grid max-w-7xl items-center gap-10 md:grid-cols-[1fr_0.85fr]">
+      <div className="relative mx-auto grid max-w-7xl items-center gap-8 md:grid-cols-[1fr_0.85fr] md:gap-10">
         <div className="text-center md:text-left">
           <img
             src="/logoremovebg.png"
             alt="Santo Perrito"
-            className="mx-auto mb-8 h-64 w-64 object-contain drop-shadow-[0_0_42px_rgba(255,214,10,0.55)] sm:h-80 sm:w-80 md:hidden"
+            className="mx-auto mb-7 h-80 w-80 object-contain drop-shadow-[0_0_48px_rgba(255,214,10,0.58)] sm:h-96 sm:w-96 md:hidden"
           />
 
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-yellow-300/30 bg-black/35 px-5 py-3 text-[0.68rem] font-black uppercase tracking-[0.22em] text-yellow-200 shadow-[0_8px_22px_rgba(0,0,0,0.25)] backdrop-blur sm:text-sm">
@@ -88,13 +88,13 @@ export default function Hero() {
         </div>
 
         <div className="relative mx-auto hidden max-w-md items-center justify-center md:flex">
-          <div className="absolute h-96 w-96 rounded-full bg-yellow-300/25 blur-3xl" />
-          <div className="absolute h-72 w-72 rounded-full bg-red-950/40 blur-2xl" />
+          <div className="absolute h-[28rem] w-[28rem] rounded-full bg-yellow-300/25 blur-3xl" />
+          <div className="absolute h-80 w-80 rounded-full bg-red-950/40 blur-2xl" />
 
           <img
             src="/logoremovebg.png"
             alt="Santo Perrito"
-            className="relative w-full max-w-sm object-contain drop-shadow-[0_0_44px_rgba(255,214,10,0.45)]"
+            className="relative w-full max-w-md object-contain drop-shadow-[0_0_50px_rgba(255,214,10,0.48)] lg:max-w-lg"
           />
         </div>
       </div>
