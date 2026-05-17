@@ -1,7 +1,7 @@
 export type Product = {
   id: number
   name: string
-  category: "Perritos" | "Salchipapas" | "Raciones" | "Delicias" | "Bebidas"
+  category: "Perritos" | "Salchipapas" | "Raciones" | "Bebidas"
   description: string
   price: number
   image: string
@@ -12,7 +12,6 @@ export const categories = [
   "Perritos",
   "Salchipapas",
   "Raciones",
-  "Delicias",
   "Bebidas",
 ]
 
@@ -48,10 +47,9 @@ export const products: Product[] = [
     id: 4,
     name: "Salchipapa Sencilla",
     category: "Salchipapas",
-    description:
-      "Papas fritas, salchicha y queso cheddar fundido.",
+    description: "Papas fritas, salchicha y queso cheddar fundido.",
     price: 5,
-    image: "/salchipapa.png",
+    image: "/salchipapasencilla.png",
   },
   {
     id: 5,
@@ -65,9 +63,8 @@ export const products: Product[] = [
   {
     id: 6,
     name: "Nuggets de Pollo",
-    category: "Delicias",
-    description:
-      "Nuggets de pollo acompañados con papas fritas.",
+    category: "Raciones",
+    description: "Nuggets de pollo acompañados con papas fritas.",
     price: 5,
     image: "/nugetspollo.png",
   },
@@ -78,14 +75,13 @@ export const products: Product[] = [
     description:
       "Ración de papas fritas doradas y crujientes para acompañar tu pedido.",
     price: 3,
-    image: "/nugetspollo.png",
+    image: "/papasfritas.png",
   },
   {
     id: 8,
     name: "Refresco Botella",
     category: "Bebidas",
-    description:
-      "Refresco frío en botella para acompañar tu pedido.",
+    description: "Refresco frío en botella para acompañar tu pedido.",
     price: 1,
     image: "/refresco-pequeno.png",
   },
@@ -93,8 +89,7 @@ export const products: Product[] = [
     id: 9,
     name: "Refresco 1LT",
     category: "Bebidas",
-    description:
-      "Refresco de 1 litro ideal para compartir.",
+    description: "Refresco de 1 litro ideal para compartir.",
     price: 2,
     image: "/refresco1litros.png",
   },
@@ -102,17 +97,15 @@ export const products: Product[] = [
     id: 10,
     name: "Nestea",
     category: "Bebidas",
-    description:
-      "Té frío para acompañar tu comida.",
+    description: "Té frío para acompañar tu comida.",
     price: 3,
-    image: "/nete.png",
+    image: "/telipton.png",
   },
   {
     id: 11,
     name: "Malta",
     category: "Bebidas",
-    description:
-      "Malta fría para acompañar tu pedido.",
+    description: "Malta fría para acompañar tu pedido.",
     price: 1,
     image: "/malta.png",
   },
@@ -120,9 +113,8 @@ export const products: Product[] = [
     id: 12,
     name: "Agua",
     category: "Bebidas",
-    description:
-      "Agua fría para refrescarte y acompañar tu comida.",
+    description: "Agua fría para refrescarte y acompañar tu comida.",
     price: 1.5,
-    image: "/jugoyukeri.png",
+    image: "/agua.png",
   },
 ]
