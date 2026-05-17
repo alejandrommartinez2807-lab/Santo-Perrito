@@ -16,7 +16,7 @@ export default function Home() {
   const [isCartOpen, setIsCartOpen] = useState(false)
 
   return (
-    <main className="min-h-screen bg-[#2a0000] text-white">
+    <main className="min-h-screen bg-[#fff7e8] text-[#220000]">
       <Navbar
         totalItems={cart.totalItems}
         onOpenCart={() => setIsCartOpen(true)}

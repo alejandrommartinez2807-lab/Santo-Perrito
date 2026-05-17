@@ -56,23 +56,23 @@ export default function ProductCard({
       viewport={{ once: true, margin: "-80px" }}
       transition={{ duration: 0.35, delay: Math.min(index * 0.04, 0.2) }}
       whileHover={{ y: -6 }}
-      className="group overflow-hidden rounded-[1.8rem] border border-yellow-300/20 bg-[#340000]/92 shadow-2xl shadow-black/25 backdrop-blur"
+      className="group overflow-hidden rounded-[1.8rem] border-2 border-[#a00000] bg-white shadow-[0_10px_0_rgba(160,0,0,0.14),0_22px_35px_rgba(80,0,0,0.12)]"
     >
-      <div className="relative h-64 overflow-hidden bg-[#130000] sm:h-72">
+      <div className="relative h-64 overflow-hidden bg-[#fff7e8] sm:h-72">
         <motion.img
-          src={image || "/logo-santo-perrito.png"}
+          src={image || "/logoremovebg.png"}
           alt={name}
-          className="h-full w-full object-cover"
+          className="h-full w-full object-cover object-center"
           whileHover={{ scale: 1.06 }}
           transition={{ duration: 0.45 }}
           onError={(event) => {
-            event.currentTarget.src = "/logo-santo-perrito.png"
+            event.currentTarget.src = "/logoremovebg.png"
           }}
         />
 
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/25 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#220000]/90 via-[#220000]/18 to-transparent" />
 
-        <span className="absolute left-4 top-4 rounded-full border border-yellow-300/30 bg-black/72 px-3 py-2 text-xs font-black uppercase tracking-[0.18em] text-yellow-300 backdrop-blur">
+        <span className="absolute left-4 top-4 rounded-full border-2 border-yellow-300 bg-[#a00000] px-3 py-2 text-xs font-black uppercase tracking-[0.18em] text-yellow-300 shadow-md">
           {category}
         </span>
 
@@ -82,17 +82,17 @@ export default function ProductCard({
               Santo Perrito
             </p>
 
-            <h3 className="mt-1 text-[1.85rem] font-black uppercase leading-[0.95] tracking-[-0.05em] text-white sm:text-[2.1rem]">
+            <h3 className="mt-1 text-[1.85rem] font-black uppercase leading-[0.95] tracking-[-0.05em] text-white drop-shadow-[0_3px_0_rgba(0,0,0,0.35)] sm:text-[2.1rem]">
               {name}
             </h3>
           </div>
 
-          <div className="min-w-[110px] rounded-[1.4rem] bg-yellow-300 px-4 py-3 text-right text-[#4a0000] shadow-xl shadow-yellow-950/20">
+          <div className="min-w-[110px] rounded-[1.2rem] border-2 border-[#a00000] bg-yellow-300 px-4 py-3 text-right text-[#4a0000] shadow-[0_7px_0_rgba(100,0,0,0.22)]">
             <p className="text-2xl font-black leading-none">
               {formatUSD(price)}
             </p>
 
-            <div className="mt-2 border-t border-[#6b0000]/20 pt-2">
+            <div className="mt-2 border-t border-[#a00000]/25 pt-2">
               <p className="text-sm font-black leading-none sm:text-base">
                 Bs {formatVES(price * exchangeRate)}
               </p>
@@ -102,17 +102,17 @@ export default function ProductCard({
       </div>
 
       <div className="p-5 sm:p-6">
-        <p className="min-h-[56px] text-sm leading-relaxed text-yellow-50/85 sm:text-base">
+        <p className="min-h-[64px] text-sm font-semibold leading-relaxed text-[#3a0000]/82 sm:text-base">
           {description}
         </p>
 
         <button
           type="button"
           onClick={handleAddToCart}
-          className={`mt-6 flex w-full items-center justify-center gap-3 rounded-xl px-4 py-4 font-black uppercase transition active:scale-[0.98] ${
+          className={`mt-6 flex w-full items-center justify-center gap-3 rounded-xl border-2 px-4 py-4 font-black uppercase shadow-[0_6px_0_rgba(100,0,0,0.18)] transition active:translate-y-1 active:shadow-none ${
             added
-              ? "bg-green-500 text-white"
-              : "bg-gradient-to-r from-yellow-300 via-yellow-400 to-orange-400 text-[#4a0000] hover:from-yellow-200 hover:via-yellow-300 hover:to-orange-300"
+              ? "border-green-700 bg-green-500 text-white"
+              : "border-[#a00000] bg-[#a00000] text-white hover:bg-yellow-300 hover:text-[#4a0000]"
           }`}
         >
           {added ? (

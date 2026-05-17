@@ -1,112 +1,165 @@
-"use client"
+import {
+  Camera,
+  MapPin,
+  MessageCircle,
+  Star,
+  Clock,
+  Smartphone,
+} from "lucide-react"
 
-import { MapPin, MessageCircle, Star } from "lucide-react"
-
-const GOOGLE_MAPS_LINK = "https://maps.app.goo.gl/qAAHRjoTeYByH2We8"
-const REVIEW_LINK = "https://maps.app.goo.gl/qAAHRjoTeYByH2We8"
-const WHATSAPP_LINK = "https://wa.me/584144841618"
-
-const sections = [
-  {
-    id: "ubicacion",
-    eyebrow: "Encuéntranos",
-    title: "Visita Santo Perrito",
-    description:
-      "Estamos listos para recibirte con perros calientes, delicias y bebidas frías. Abre nuestra ubicación en Google Maps y ven por tu antojo.",
-    buttonText: "Abrir ubicación",
-    href: GOOGLE_MAPS_LINK,
-    icon: MapPin,
-    align: "left",
-  },
-  {
-    id: "resena",
-    eyebrow: "Tu opinión cuenta",
-    title: "Agrega tu reseña",
-    description:
-      "Si ya probaste Santo Perrito, déjanos tu reseña en Google Maps y ayúdanos a seguir creciendo.",
-    buttonText: "Escribir reseña",
-    href: REVIEW_LINK,
-    icon: Star,
-    align: "right",
-  },
-  {
-    id: "contacto",
-    eyebrow: "Santo Perrito",
-    title: "Haz tu pedido por WhatsApp",
-    description:
-      "Perros, delicias y bebidas. Escríbenos, arma tu pedido y te atendemos directo por WhatsApp.",
-    buttonText: "Pedir ahora",
-    href: WHATSAPP_LINK,
-    icon: MessageCircle,
-    align: "left",
-  },
-]
+const WHATSAPP_URL = "https://wa.me/584227377486"
+const INSTAGRAM_URL = "https://www.instagram.com/santoperritoval/"
+const GOOGLE_MAPS_URL = "https://maps.app.goo.gl/qAAHRjoTeYByH2We8"
 
 export default function BottomInfoSections() {
   return (
-    <section className="relative overflow-hidden bg-[#2a0000] px-4 py-14 sm:px-6 md:py-20">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,214,10,0.24),transparent_42%)]" />
-      <div className="pointer-events-none absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-black/35 to-transparent" />
-      <div className="pointer-events-none absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-black/35 to-transparent" />
+    <section className="relative overflow-hidden bg-[#fff7e8] px-4 py-16 text-[#220000] sm:px-6 sm:py-24">
+      <div className="absolute inset-x-0 top-0 h-8 bg-[linear-gradient(45deg,#a00000_25%,transparent_25%),linear-gradient(-45deg,#a00000_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#a00000_75%),linear-gradient(-45deg,transparent_75%,#a00000_75%)] bg-[length:32px_32px] bg-[position:0_0,0_16px,16px_-16px,-16px_0] bg-[#fff7e8]" />
 
-      <div className="relative mx-auto flex max-w-6xl flex-col gap-8 md:gap-10">
-        {sections.map((section) => {
-          const Icon = section.icon
-          const isRight = section.align === "right"
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,211,0,0.24),transparent_32%),radial-gradient(circle_at_right,rgba(160,0,0,0.08),transparent_34%)]" />
 
-          return (
-            <section key={section.id} id={section.id} className="scroll-mt-36">
-              <div
-                className={[
-                  "relative overflow-hidden rounded-[2rem] border border-yellow-300/25 bg-[linear-gradient(135deg,#3a0000_0%,#850000_48%,#d90404_100%)] shadow-[0_24px_55px_rgba(0,0,0,0.38)]",
-                  isRight ? "md:ml-auto md:w-[88%]" : "md:mr-auto md:w-[88%]",
-                ].join(" ")}
-              >
-                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,214,10,0.22),transparent_40%)]" />
-                <div className="pointer-events-none absolute -right-24 -top-24 h-56 w-56 rounded-full bg-yellow-300/20 blur-3xl" />
-                <div className="pointer-events-none absolute -bottom-28 -left-24 h-56 w-56 rounded-full bg-black/25 blur-3xl" />
+      <div className="relative mx-auto max-w-7xl">
+        <div
+          id="ubicacion"
+          className="overflow-hidden rounded-[2rem] border-4 border-[#a00000] bg-white shadow-[0_12px_0_rgba(160,0,0,0.14),0_24px_38px_rgba(80,0,0,0.12)]"
+        >
+          <div className="h-6 bg-[linear-gradient(45deg,#a00000_25%,transparent_25%),linear-gradient(-45deg,#a00000_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#a00000_75%),linear-gradient(-45deg,transparent_75%,#a00000_75%)] bg-[length:32px_32px] bg-[position:0_0,0_16px,16px_-16px,-16px_0] bg-[#fff7e8]" />
 
-                <div
-                  className={[
-                    "relative grid items-center gap-7 px-5 py-10 sm:px-8 sm:py-12 md:grid-cols-[1fr_auto] md:px-12",
-                    isRight ? "md:text-right" : "md:text-left",
-                  ].join(" ")}
-                >
-                  <div className="text-center md:text-inherit">
-                    <p className="text-xs font-black uppercase tracking-[0.35em] text-yellow-300 sm:text-sm">
-                      {section.eyebrow}
-                    </p>
-
-                    <h2 className="mx-auto mt-4 max-w-3xl text-[2.4rem] font-black uppercase leading-[0.92] text-white drop-shadow-[0_5px_0_rgba(0,0,0,0.32)] sm:text-6xl md:mx-0 md:text-7xl">
-                      {section.title}
-                    </h2>
-
-                    <p className="mx-auto mt-5 max-w-2xl text-base font-bold leading-7 text-yellow-50/95 sm:text-lg md:mx-0">
-                      {section.description}
-                    </p>
-                  </div>
-
-                  <div
-                    className={[
-                      "flex justify-center",
-                      isRight ? "md:justify-start md:order-first" : "md:justify-end",
-                    ].join(" ")}
-                  >
-                    <a
-                      href={section.href}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex min-h-[58px] items-center justify-center gap-3 rounded-full bg-gradient-to-r from-yellow-300 via-yellow-400 to-orange-400 px-8 py-4 text-center text-sm font-black uppercase tracking-[0.12em] text-[#4a0000] shadow-[0_16px_35px_rgba(0,0,0,0.28)] transition hover:scale-[1.03] sm:px-10 sm:text-base"
-                    >
-                      <Icon size={22} />
-                      {section.buttonText}
-                    </a>
-                  </div>
-                </div>
+          <div className="grid gap-0 lg:grid-cols-[1.05fr_0.95fr]">
+            <div className="p-7 sm:p-10 lg:p-12">
+              <div className="mb-6 inline-flex rounded-[0.55rem] bg-[#a00000] px-5 py-2 shadow-[0_6px_0_rgba(90,0,0,0.18)]">
+                <p className="text-xl font-black uppercase tracking-[-0.02em] text-yellow-300 sm:text-3xl">
+                  Encuéntranos
+                </p>
               </div>
-            </section>
-          )
-        })}
+
+              <h2 className="max-w-3xl text-5xl font-black uppercase leading-[0.88] tracking-[-0.07em] text-[#a00000] drop-shadow-[0_4px_0_rgba(255,211,0,0.75)] sm:text-6xl lg:text-7xl">
+                Visita Santo Perrito
+              </h2>
+
+              <p className="mt-6 max-w-2xl text-base font-bold leading-relaxed text-[#3a0000]/82 sm:text-lg">
+                Estamos listos para recibirte con perritos, salchipapas,
+                raciones y bebidas frías. Abre nuestra ubicación en Google Maps
+                y ven por tu antojo.
+              </p>
+
+              <div className="mt-8 grid gap-3 sm:grid-cols-2">
+                <a
+                  href={GOOGLE_MAPS_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center justify-center gap-3 rounded-full border-2 border-[#a00000] bg-[#a00000] px-6 py-4 text-sm font-black uppercase tracking-[0.1em] text-white shadow-[0_7px_0_rgba(90,0,0,0.22)] transition hover:scale-105"
+                >
+                  <MapPin size={20} />
+                  Abrir ubicación
+                </a>
+
+                <a
+                  href={WHATSAPP_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center justify-center gap-3 rounded-full border-2 border-[#a00000] bg-yellow-300 px-6 py-4 text-sm font-black uppercase tracking-[0.1em] text-[#4a0000] shadow-[0_7px_0_rgba(160,0,0,0.16)] transition hover:scale-105"
+                >
+                  <MessageCircle size={20} />
+                  WhatsApp
+                </a>
+              </div>
+            </div>
+
+            <div className="border-t-4 border-[#a00000] bg-[#fff7e8] p-7 sm:p-10 lg:border-l-4 lg:border-t-0 lg:p-12">
+              <div className="grid gap-4">
+                <article className="rounded-[1.6rem] border-2 border-[#a00000] bg-white p-5 shadow-[0_7px_0_rgba(160,0,0,0.12)]">
+                  <div className="flex items-start gap-4">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 border-[#a00000] bg-yellow-300 text-[#4a0000]">
+                      <Clock size={22} />
+                    </div>
+
+                    <div>
+                      <p className="text-xs font-black uppercase tracking-[0.2em] text-[#a00000]">
+                        Horario
+                      </p>
+
+                      <p className="mt-2 text-lg font-black text-[#220000]">
+                        Lunes a jueves: 6:00 p.m a 11:00 p.m
+                      </p>
+
+                      <p className="mt-1 text-lg font-black text-[#220000]">
+                        Viernes a domingo: 6:00 p.m a 12:30 a.m
+                      </p>
+                    </div>
+                  </div>
+                </article>
+
+                <article
+                  id="resena"
+                  className="rounded-[1.6rem] border-2 border-[#a00000] bg-white p-5 shadow-[0_7px_0_rgba(160,0,0,0.12)]"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 border-[#a00000] bg-yellow-300 text-[#4a0000]">
+                      <Star size={22} />
+                    </div>
+
+                    <div>
+                      <p className="text-xs font-black uppercase tracking-[0.2em] text-[#a00000]">
+                        Reseñas
+                      </p>
+
+                      <p className="mt-2 text-base font-bold leading-6 text-[#3a0000]/78">
+                        Después de probar tu pedido, puedes apoyar el negocio
+                        dejando tu reseña o compartiendo la página.
+                      </p>
+                    </div>
+                  </div>
+                </article>
+
+                <article className="rounded-[1.6rem] border-2 border-[#a00000] bg-white p-5 shadow-[0_7px_0_rgba(160,0,0,0.12)]">
+                  <div className="flex items-start gap-4">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 border-[#a00000] bg-yellow-300 text-[#4a0000]">
+                      <Smartphone size={22} />
+                    </div>
+
+                    <div>
+                      <p className="text-xs font-black uppercase tracking-[0.2em] text-[#a00000]">
+                        Pedido rápido
+                      </p>
+
+                      <p className="mt-2 text-base font-bold leading-6 text-[#3a0000]/78">
+                        Agrega productos al carrito y registra el pedido en el
+                        local o envíalo directamente por WhatsApp.
+                      </p>
+                    </div>
+                  </div>
+                </article>
+
+                <a
+                  href={INSTAGRAM_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center justify-center gap-3 rounded-full border-2 border-[#a00000] bg-white px-6 py-4 text-sm font-black uppercase tracking-[0.1em] text-[#a00000] shadow-[0_7px_0_rgba(160,0,0,0.12)] transition hover:scale-105 hover:bg-yellow-100"
+                >
+                  <Camera size={20} />
+                  @santoperritoval
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <footer className="mt-12 rounded-[1.6rem] border-2 border-[#a00000] bg-white px-5 py-6 text-center shadow-[0_8px_0_rgba(160,0,0,0.12)]">
+          <img
+            src="/logoremovebg.png"
+            alt="Santo Perrito"
+            className="mx-auto h-20 w-20 object-contain"
+          />
+
+          <p className="mt-4 text-sm font-black uppercase tracking-[0.28em] text-[#a00000]">
+            Santo Perrito
+          </p>
+
+          <p className="mt-2 text-sm font-bold text-[#3a0000]/70">
+            Perritos, salchipapas, raciones y bebidas.
+          </p>
+        </footer>
       </div>
     </section>
   )
