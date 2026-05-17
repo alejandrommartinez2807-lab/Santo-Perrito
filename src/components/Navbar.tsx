@@ -51,8 +51,8 @@ export default function Navbar({ totalItems, onOpenCart }: NavbarProps) {
               Santo Perrito
             </p>
 
-            <p className="mt-1 truncate text-[0.9rem] font-black uppercase tracking-[0.32em] text-[#220000] sm:text-base">
-              Perros & delicias
+            <p className="mt-1 text-[0.76rem] font-black leading-tight tracking-[0.04em] text-[#220000] sm:text-base sm:tracking-[0.08em]">
+              Los Mejores Perros De Valencia
             </p>
           </div>
         </a>

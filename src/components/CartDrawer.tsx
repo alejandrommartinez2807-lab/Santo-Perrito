@@ -49,6 +49,20 @@ type OrderType = "Comer aquí" | "Para llevar"
 
 const WHATSAPP_NUMBER = "584227377486"
 
+const QUICK_PLACES = ["Mesa 1", "Mesa 2", "Mesa 3", "Mesa 4", "Barra", "Afuera"]
+
+async function readApiResponse(response: Response) {
+  const text = await response.text()
+
+  try {
+    return JSON.parse(text)
+  } catch {
+    throw new Error(
+      "El servidor no devolvió una respuesta válida. Revisa que la API de pedidos y Google Sheets estén funcionando correctamente."
+    )
+  }
+}
+
 export default function CartDrawer({
   isOpen,
   onClose,
@@ -83,10 +97,7 @@ export default function CartDrawer({
   const isOfficialBcv = sourceLabel === "BCV" && !exchangeFallback
 
   const canRegisterLocalOrder =
-    hasItems &&
-    customerName.trim().length > 0 &&
-    tableNumber.trim().length > 0 &&
-    !isSubmittingOrder
+    hasItems && tableNumber.trim().length > 0 && !isSubmittingOrder
 
   function buildWhatsAppMessage() {
     const lines = items.map((item) => {
@@ -125,6 +136,8 @@ export default function CartDrawer({
     setIsSubmittingOrder(true)
     setOrderError(null)
 
+    await new Promise((resolve) => requestAnimationFrame(resolve))
+
     try {
       const response = await fetch("/api/orders", {
         method: "POST",
@@ -132,10 +145,10 @@ export default function CartDrawer({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          customerName,
-          tableNumber,
+          customerName: customerName.trim() || "Cliente",
+          tableNumber: tableNumber.trim(),
           orderType,
-          customerNote,
+          customerNote: customerNote.trim(),
           items,
           exchangeRate,
           exchangeSource,
@@ -143,13 +156,13 @@ export default function CartDrawer({
         }),
       })
 
-      const data = await response.json()
+      const data = await readApiResponse(response)
 
       if (!response.ok) {
         throw new Error(data.error || "No se pudo registrar el pedido")
       }
 
-      const orderId = data.order?.id || "Registrado"
+      const orderId = data.order?.id || "Pedido registrado"
 
       items.forEach((item) => {
         removeItem(item.id)
@@ -160,6 +173,13 @@ export default function CartDrawer({
       setTableNumber("")
       setCustomerNote("")
       setOrderType("Comer aquí")
+
+      window.setTimeout(() => {
+        setIsOrderModalOpen(false)
+        setLastCreatedOrderId(null)
+        setOrderError(null)
+        onClose()
+      }, 750)
     } catch (error) {
       setOrderError(
         error instanceof Error
@@ -172,9 +192,23 @@ export default function CartDrawer({
   }
 
   function closeOrderModal() {
+    if (isSubmittingOrder) return
+
     setIsOrderModalOpen(false)
     setLastCreatedOrderId(null)
     setOrderError(null)
+  }
+
+  function selectOrderType(type: OrderType) {
+    setOrderType(type)
+
+    if (type === "Para llevar") {
+      setTableNumber("Para llevar")
+    }
+
+    if (type === "Comer aquí" && tableNumber === "Para llevar") {
+      setTableNumber("")
+    }
   }
 
   const whatsappHref = `https://wa.me/${WHATSAPP_NUMBER}?text=${buildWhatsAppMessage()}`
@@ -236,8 +270,7 @@ export default function CartDrawer({
               </h3>
 
               <p className="mt-4 max-w-sm text-sm font-bold leading-6 text-[#3a0000]/75">
-                Agrega productos del menú y luego registra el pedido en el local
-                o envíalo por WhatsApp.
+                Agrega productos del menú para preparar tu pedido.
               </p>
 
               <a
@@ -246,13 +279,6 @@ export default function CartDrawer({
                 className="mt-7 inline-flex items-center justify-center rounded-full border-2 border-[#a00000] bg-yellow-300 px-7 py-4 text-sm font-black uppercase tracking-[0.12em] text-[#4a0000] shadow-[0_6px_0_rgba(160,0,0,0.18)] transition hover:scale-105"
               >
                 Ver menú
-              </a>
-
-              <a
-                href="/pedidos"
-                className="mt-4 inline-flex items-center justify-center rounded-full border-2 border-[#a00000] bg-white px-7 py-4 text-sm font-black uppercase tracking-[0.12em] text-[#a00000] transition hover:bg-yellow-100"
-              >
-                Ver panel de pedidos
               </a>
             </div>
           ) : (
@@ -457,22 +483,14 @@ export default function CartDrawer({
                 <MessageCircle size={18} />
                 Enviar por WhatsApp
               </a>
-
-              <a
-                href="/pedidos"
-                className="flex w-full items-center justify-center gap-2 rounded-full border-2 border-[#a00000] bg-white px-5 py-3 text-xs font-black uppercase tracking-[0.12em] text-[#a00000] transition hover:bg-yellow-100"
-              >
-                <ClipboardList size={18} />
-                Ver panel
-              </a>
             </div>
           </div>
         )}
       </aside>
 
       {isOrderModalOpen && (
-        <div className="fixed inset-0 z-[110] flex items-end justify-center bg-[#220000]/60 px-4 py-5 backdrop-blur-sm sm:items-center">
-          <div className="w-full max-w-lg overflow-hidden rounded-[2rem] border-4 border-[#a00000] bg-[#fff7e8] text-[#220000] shadow-2xl shadow-black/45">
+        <div className="fixed inset-0 z-[110] flex items-end justify-center bg-[#220000]/60 px-4 py-4 backdrop-blur-sm sm:items-center">
+          <div className="max-h-[94vh] w-full max-w-lg overflow-y-auto rounded-[2rem] border-4 border-[#a00000] bg-[#fff7e8] text-[#220000] shadow-2xl shadow-black/45">
             <div className="h-5 bg-[linear-gradient(45deg,#a00000_25%,transparent_25%),linear-gradient(-45deg,#a00000_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#a00000_75%),linear-gradient(-45deg,transparent_75%,#a00000_75%)] bg-[length:32px_32px] bg-[position:0_0,0_16px,16px_-16px,-16px_0] bg-[#fff7e8]" />
 
             <div className="relative bg-white px-6 py-5">
@@ -481,6 +499,7 @@ export default function CartDrawer({
                   <p className="text-xs font-black uppercase tracking-[0.28em] text-[#a00000]">
                     Pedido en el local
                   </p>
+
                   <h3 className="mt-2 text-3xl font-black uppercase leading-none text-[#a00000] drop-shadow-[0_3px_0_rgba(255,211,0,0.75)]">
                     Identificar pedido
                   </h3>
@@ -489,7 +508,8 @@ export default function CartDrawer({
                 <button
                   type="button"
                   onClick={closeOrderModal}
-                  className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-[#a00000] bg-yellow-300 text-[#4a0000]"
+                  disabled={isSubmittingOrder}
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 border-[#a00000] bg-yellow-300 text-[#4a0000] disabled:opacity-50"
                 >
                   <X size={24} />
                 </button>
@@ -508,37 +528,48 @@ export default function CartDrawer({
                   Pedido registrado
                 </p>
 
-                <h4 className="mt-2 text-5xl font-black text-[#220000]">
-                  {lastCreatedOrderId}
+                <h4 className="mt-2 text-3xl font-black text-[#220000]">
+                  Listo para preparar
                 </h4>
 
                 <p className="mx-auto mt-4 max-w-sm text-sm font-bold leading-6 text-[#3a0000]/75">
-                  Ya aparece en Google Sheets y en el panel interno.
+                  El pedido fue enviado al panel interno del local.
                 </p>
 
-                <div className="mt-7 grid gap-3 sm:grid-cols-2">
-                  <a
-                    href="/pedidos"
-                    className="rounded-full border-2 border-[#a00000] bg-yellow-300 px-5 py-4 text-sm font-black uppercase text-[#4a0000]"
-                  >
-                    Ver panel
-                  </a>
+                <p className="mt-3 text-[0.7rem] font-black uppercase tracking-[0.16em] text-[#a00000]/70">
+                  Referencia interna: {lastCreatedOrderId}
+                </p>
 
-                  <button
-                    type="button"
-                    onClick={closeOrderModal}
-                    className="rounded-full border-2 border-[#a00000] bg-white px-5 py-4 text-sm font-black uppercase text-[#a00000]"
-                  >
-                    Cerrar
-                  </button>
-                </div>
+                <p className="mt-5 text-xs font-black uppercase tracking-[0.16em] text-[#3a0000]/60">
+                  Cerrando para seguir vendiendo...
+                </p>
+              </div>
+            ) : isSubmittingOrder ? (
+              <div className="px-6 py-12 text-center">
+                <Loader2
+                  size={58}
+                  className="mx-auto animate-spin text-[#a00000]"
+                />
+
+                <p className="mt-6 text-sm font-black uppercase tracking-[0.24em] text-[#a00000]">
+                  Enviando pedido
+                </p>
+
+                <h4 className="mt-2 text-3xl font-black uppercase leading-tight text-[#220000]">
+                  Registrando en el panel
+                </h4>
+
+                <p className="mx-auto mt-4 max-w-sm text-sm font-bold leading-6 text-[#3a0000]/75">
+                  Espera un momento. El pedido se está guardando para el local.
+                </p>
               </div>
             ) : (
               <div className="space-y-4 px-6 py-6">
                 <div>
                   <label className="text-xs font-black uppercase tracking-[0.18em] text-[#a00000]">
-                    Nombre del cliente
+                    Nombre del cliente opcional
                   </label>
+
                   <input
                     value={customerName}
                     onChange={(event) => setCustomerName(event.target.value)}
@@ -551,11 +582,32 @@ export default function CartDrawer({
                   <label className="text-xs font-black uppercase tracking-[0.18em] text-[#a00000]">
                     Mesa o ubicación
                   </label>
+
+                  <div className="mt-2 grid grid-cols-3 gap-2">
+                    {QUICK_PLACES.map((place) => (
+                      <button
+                        key={place}
+                        type="button"
+                        onClick={() => {
+                          setTableNumber(place)
+                          setOrderType("Comer aquí")
+                        }}
+                        className={`rounded-xl border-2 px-3 py-3 text-xs font-black uppercase transition ${
+                          tableNumber === place
+                            ? "border-[#a00000] bg-yellow-300 text-[#4a0000]"
+                            : "border-[#a00000] bg-white text-[#a00000]"
+                        }`}
+                      >
+                        {place}
+                      </button>
+                    ))}
+                  </div>
+
                   <input
                     value={tableNumber}
                     onChange={(event) => setTableNumber(event.target.value)}
-                    placeholder="Ejemplo: Mesa 4 / barra / afuera"
-                    className="mt-2 w-full rounded-2xl border-2 border-[#a00000]/25 bg-white px-4 py-4 text-base font-bold text-[#4a0000] outline-none placeholder:text-[#4a0000]/45 focus:border-[#a00000]"
+                    placeholder="O escribe otra ubicación..."
+                    className="mt-3 w-full rounded-2xl border-2 border-[#a00000]/25 bg-white px-4 py-4 text-base font-bold text-[#4a0000] outline-none placeholder:text-[#4a0000]/45 focus:border-[#a00000]"
                   />
                 </div>
 
@@ -570,7 +622,7 @@ export default function CartDrawer({
                         <button
                           key={type}
                           type="button"
-                          onClick={() => setOrderType(type)}
+                          onClick={() => selectOrderType(type)}
                           className={`rounded-2xl border-2 px-4 py-4 text-sm font-black uppercase transition ${
                             orderType === type
                               ? "border-[#a00000] bg-yellow-300 text-[#4a0000]"
@@ -588,11 +640,12 @@ export default function CartDrawer({
                   <label className="text-xs font-black uppercase tracking-[0.18em] text-[#a00000]">
                     Nota general opcional
                   </label>
+
                   <textarea
                     value={customerNote}
                     onChange={(event) => setCustomerNote(event.target.value)}
                     placeholder="Ejemplo: cliente espera afuera, entregar rápido..."
-                    className="mt-2 min-h-24 w-full resize-none rounded-2xl border-2 border-[#a00000]/25 bg-white px-4 py-4 text-base font-bold text-[#4a0000] outline-none placeholder:text-[#4a0000]/45 focus:border-[#a00000]"
+                    className="mt-2 min-h-20 w-full resize-none rounded-2xl border-2 border-[#a00000]/25 bg-white px-4 py-4 text-base font-bold text-[#4a0000] outline-none placeholder:text-[#4a0000]/45 focus:border-[#a00000]"
                   />
                 </div>
 
@@ -614,12 +667,8 @@ export default function CartDrawer({
                       : "border-[#a00000]/15 bg-[#ddd3c4] text-[#3a0000]/35"
                   }`}
                 >
-                  {isSubmittingOrder ? (
-                    <Loader2 size={21} className="animate-spin" />
-                  ) : (
-                    <ClipboardList size={21} />
-                  )}
-                  {isSubmittingOrder ? "Registrando..." : "Registrar pedido"}
+                  <ClipboardList size={21} />
+                  Registrar pedido
                 </button>
               </div>
             )}

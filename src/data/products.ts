@@ -1,7 +1,7 @@
 export type Product = {
   id: number
   name: string
-  category: "Perritos" | "Salchipapas" | "Raciones" | "Bebidas"
+  category: "Combos" | "Perritos" | "Salchipapas" | "Raciones" | "Bebidas"
   description: string
   price: number
   image: string
@@ -9,6 +9,7 @@ export type Product = {
 
 export const categories = [
   "Todos",
+  "Combos",
   "Perritos",
   "Salchipapas",
   "Raciones",
@@ -16,8 +17,29 @@ export const categories = [
 ]
 
 export const products: Product[] = [
+  // COMBOS
   {
     id: 1,
+    name: "Combo Clásico",
+    category: "Combos",
+    description:
+      "4 Perros Clásicos + 1 refresco de 1 litro. Pago en Zelle o efectivo.",
+    price: 10,
+    image: "/combo-normal.png",
+  },
+  {
+    id: 2,
+    name: "Combo Cachón",
+    category: "Combos",
+    description:
+      "4 Santo Cachón + 1 refresco de 2 litros. Pago en Zelle o efectivo.",
+    price: 15,
+    image: "/combo-cachon.png",
+  },
+
+  // PERRITOS
+  {
+    id: 3,
     name: "Clásico",
     category: "Perritos",
     description:
@@ -26,7 +48,7 @@ export const products: Product[] = [
     image: "/perroclasico.png",
   },
   {
-    id: 2,
+    id: 4,
     name: "Santo Cachón",
     category: "Perritos",
     description:
@@ -35,7 +57,7 @@ export const products: Product[] = [
     image: "/Santocachon.png",
   },
   {
-    id: 3,
+    id: 5,
     name: "Santo Perrito",
     category: "Perritos",
     description:
@@ -43,8 +65,10 @@ export const products: Product[] = [
     price: 3.5,
     image: "/Santoperrito.png",
   },
+
+  // SALCHIPAPAS
   {
-    id: 4,
+    id: 6,
     name: "Salchipapa Sencilla",
     category: "Salchipapas",
     description: "Papas fritas, salchicha y queso cheddar fundido.",
@@ -52,7 +76,7 @@ export const products: Product[] = [
     image: "/salchipapa.png",
   },
   {
-    id: 5,
+    id: 7,
     name: "Salchipapa Especial",
     category: "Salchipapas",
     description:
@@ -60,16 +84,18 @@ export const products: Product[] = [
     price: 7,
     image: "/salchipapaespecial.png",
   },
+
+  // RACIONES
   {
-    id: 6,
+    id: 8,
     name: "Nuggets de Pollo",
     category: "Raciones",
-    description: "Nuggets de pollo acompañados con papas fritas.",
+    description: "Nuggets de pollo con papas fritas.",
     price: 5,
     image: "/nugetspollo.png",
   },
   {
-    id: 7,
+    id: 9,
     name: "Ración de Papas Fritas",
     category: "Raciones",
     description:
@@ -77,8 +103,10 @@ export const products: Product[] = [
     price: 3,
     image: "/papasfritas.png",
   },
+
+  // BEBIDAS
   {
-    id: 8,
+    id: 10,
     name: "Refresco Botella",
     category: "Bebidas",
     description: "Refresco frío en botella para acompañar tu pedido.",
@@ -86,7 +114,7 @@ export const products: Product[] = [
     image: "/refresco-pequeno.png",
   },
   {
-    id: 9,
+    id: 11,
     name: "Refresco 1LT",
     category: "Bebidas",
     description: "Refresco de 1 litro ideal para compartir.",
@@ -94,27 +122,27 @@ export const products: Product[] = [
     image: "/refresco1litros.png",
   },
   {
-    id: 10,
+    id: 12,
+    name: "Refresco 1.5LT",
+    category: "Bebidas",
+    description: "Refresco de 1.5 litros para acompañar tu comida.",
+    price: 2.5,
+    image: "/refresco1.5litros.png",
+  },
+  {
+    id: 13,
+    name: "Refresco 2LT",
+    category: "Bebidas",
+    description: "Refresco de 2 litros ideal para compartir.",
+    price: 3,
+    image: "/refresco2litros.png",
+  },
+  {
+    id: 14,
     name: "Nestea",
     category: "Bebidas",
-    description: "Té frío para acompañar tu comida.",
+    description: "Deliciosa bebida venezolana.",
     price: 3,
-    image: "/telipton.png",
-  },
-  {
-    id: 11,
-    name: "Malta",
-    category: "Bebidas",
-    description: "Malta fría para acompañar tu pedido.",
-    price: 1,
-    image: "/malta.png",
-  },
-  {
-    id: 12,
-    name: "Agua",
-    category: "Bebidas",
-    description: "Agua fría para refrescarte y acompañar tu comida.",
-    price: 1.5,
-    image: "/agua.png",
+    image: "/nete.png",
   },
 ]
