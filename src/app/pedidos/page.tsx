@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import {
+  AlertTriangle,
   ArrowLeft,
   CheckCircle2,
   Clock,
@@ -12,6 +13,7 @@ import {
   LogIn,
   PackageCheck,
   RefreshCw,
+  Trash2,
   X,
   XCircle,
 } from "lucide-react"
@@ -266,6 +268,9 @@ export default function PedidosPage() {
   const [closeSummaryMessage, setCloseSummaryMessage] = useState<string | null>(
     null
   )
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false)
+  const [resetConfirmationText, setResetConfirmationText] = useState("")
+  const [isResettingDay, setIsResettingDay] = useState(false)
 
   const knownOrderIdsRef = useRef<Set<string>>(new Set())
   const hasLoadedOnceRef = useRef(false)
@@ -500,6 +505,56 @@ export default function PedidosPage() {
     }
   }
 
+  async function resetDayOrders() {
+    if (!adminPassword) return
+
+    if (resetConfirmationText.trim().toUpperCase() !== "REINICIAR") {
+      setErrorMessage("Debes escribir REINICIAR para confirmar el reinicio.")
+      return
+    }
+
+    try {
+      setIsResettingDay(true)
+      setErrorMessage(null)
+
+      const response = await fetch("/api/orders", {
+        method: "DELETE",
+        headers: {
+          "x-admin-password": adminPassword,
+        },
+      })
+
+      const data = await readApiResponse(response)
+
+      if (!response.ok) {
+        throw new Error(data.error || "No se pudieron reiniciar los pedidos")
+      }
+
+      pendingStatusRef.current = new Map()
+      knownOrderIdsRef.current = new Set()
+      hasLoadedOnceRef.current = false
+
+      setOrders([])
+      setHighlightedIds([])
+      setResetConfirmationText("")
+      setIsResetModalOpen(false)
+      setIsCloseModalOpen(false)
+      setCloseSummaryMessage(
+        data.message || "Pedidos reiniciados correctamente."
+      )
+
+      await loadOrders(adminPassword, true)
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "No se pudieron reiniciar los pedidos"
+      )
+    } finally {
+      setIsResettingDay(false)
+    }
+  }
+
   async function updateStatus(orderId: string, status: OrderStatus) {
     if (!adminPassword) return
 
@@ -676,6 +731,18 @@ export default function PedidosPage() {
                   >
                     <Clock size={16} />
                     Cierre del día
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setResetConfirmationText("")
+                      setIsResetModalOpen(true)
+                    }}
+                    className="inline-flex items-center gap-2 rounded-full border-2 border-red-600 bg-red-100 px-4 py-2 text-xs font-black uppercase tracking-[0.12em] text-red-700 transition hover:bg-red-200"
+                  >
+                    <Trash2 size={16} />
+                    Reiniciar día
                   </button>
 
                   <button
@@ -1131,6 +1198,35 @@ export default function PedidosPage() {
                 </div>
               )}
 
+              <div className="rounded-[1.5rem] border-2 border-red-500/35 bg-red-50 p-5">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="mt-1 text-red-600" size={24} />
+
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-[0.18em] text-red-700">
+                      Reiniciar pedidos
+                    </p>
+                    <p className="mt-2 text-sm font-bold leading-6 text-red-800">
+                      Usa esta opción solo después de copiar el cierre del día.
+                      Esto borrará todos los pedidos guardados y dejará el panel
+                      limpio para empezar una nueva jornada.
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setResetConfirmationText("")
+                    setIsResetModalOpen(true)
+                  }}
+                  className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full border-2 border-red-600 bg-red-600 px-6 py-4 text-sm font-black uppercase tracking-[0.12em] text-white shadow-[0_6px_0_rgba(127,29,29,0.25)] sm:w-auto"
+                >
+                  <Trash2 size={18} />
+                  Reiniciar día
+                </button>
+              </div>
+
               <div className="grid gap-3 sm:grid-cols-2">
                 <button
                   type="button"
@@ -1146,6 +1242,106 @@ export default function PedidosPage() {
                   className="rounded-full border-2 border-[#a00000] bg-white px-6 py-4 text-sm font-black uppercase tracking-[0.12em] text-[#a00000]"
                 >
                   Cerrar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isResetModalOpen && (
+        <div className="fixed inset-0 z-[140] flex items-end justify-center bg-[#220000]/70 px-4 py-4 backdrop-blur-sm sm:items-center">
+          <div className="w-full max-w-xl overflow-hidden rounded-[2rem] border-4 border-red-600 bg-white text-[#220000] shadow-2xl shadow-black/45">
+            <div className="h-5 bg-[linear-gradient(45deg,#a00000_25%,transparent_25%),linear-gradient(-45deg,#a00000_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#a00000_75%),linear-gradient(-45deg,transparent_75%,#a00000_75%)] bg-[length:32px_32px] bg-[position:0_0,0_16px,16px_-16px,0] bg-[#fff7e8]" />
+
+            <div className="border-b-2 border-red-600 bg-red-50 px-6 py-5">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.28em] text-red-700">
+                    Acción irreversible
+                  </p>
+
+                  <h2 className="mt-2 text-4xl font-black uppercase leading-none text-red-700">
+                    Reiniciar día
+                  </h2>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!isResettingDay) {
+                      setIsResetModalOpen(false)
+                      setResetConfirmationText("")
+                    }
+                  }}
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 border-red-600 bg-white text-red-700"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-4 px-6 py-6">
+              <div className="rounded-[1.4rem] border-2 border-red-500/35 bg-red-50 p-4">
+                <div className="flex gap-3">
+                  <AlertTriangle className="mt-1 shrink-0 text-red-600" size={26} />
+
+                  <div>
+                    <p className="text-sm font-black uppercase text-red-800">
+                      Esto borrará todos los pedidos actuales.
+                    </p>
+                    <p className="mt-2 text-sm font-bold leading-6 text-red-800/80">
+                      Antes de continuar, copia el resumen de cierre del día si
+                      necesitas guardar las ventas. Después de reiniciar, el
+                      panel quedará en cero para comenzar una nueva jornada.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-black uppercase tracking-[0.18em] text-red-700">
+                  Escribe REINICIAR para confirmar
+                </label>
+
+                <input
+                  value={resetConfirmationText}
+                  onChange={(event) =>
+                    setResetConfirmationText(event.target.value)
+                  }
+                  placeholder="REINICIAR"
+                  className="mt-2 w-full rounded-2xl border-2 border-red-500/35 bg-red-50 px-4 py-4 text-base font-black uppercase text-red-800 outline-none placeholder:text-red-800/35 focus:border-red-600"
+                />
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={resetDayOrders}
+                  disabled={
+                    isResettingDay ||
+                    resetConfirmationText.trim().toUpperCase() !== "REINICIAR"
+                  }
+                  className="inline-flex items-center justify-center gap-2 rounded-full border-2 border-red-700 bg-red-600 px-6 py-4 text-sm font-black uppercase tracking-[0.12em] text-white shadow-[0_6px_0_rgba(127,29,29,0.25)] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isResettingDay ? (
+                    <Loader2 size={18} className="animate-spin" />
+                  ) : (
+                    <Trash2 size={18} />
+                  )}
+                  Borrar pedidos
+                </button>
+
+                <button
+                  type="button"
+                  disabled={isResettingDay}
+                  onClick={() => {
+                    setIsResetModalOpen(false)
+                    setResetConfirmationText("")
+                  }}
+                  className="rounded-full border-2 border-[#a00000] bg-white px-6 py-4 text-sm font-black uppercase tracking-[0.12em] text-[#a00000] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Cancelar
                 </button>
               </div>
             </div>

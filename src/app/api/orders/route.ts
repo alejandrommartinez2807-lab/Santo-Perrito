@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import {
+  clearOrdersInAppsScript,
   createOrderInAppsScript,
   getOrdersFromAppsScript,
 } from "@/lib/appsScriptOrders"
@@ -135,6 +136,41 @@ export async function POST(request: NextRequest) {
           error instanceof Error
             ? error.message
             : "No se pudo registrar el pedido",
+      },
+      {
+        status: 500,
+      }
+    )
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    if (!checkAdmin(request)) {
+      return NextResponse.json(
+        {
+          error: "No autorizado",
+        },
+        {
+          status: 401,
+        }
+      )
+    }
+
+    const data = await clearOrdersInAppsScript()
+
+    return NextResponse.json({
+      ok: true,
+      deleted: data.deleted || 0,
+      message: data.message || "Pedidos reiniciados correctamente.",
+    })
+  } catch (error) {
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "No se pudieron reiniciar los pedidos",
       },
       {
         status: 500,

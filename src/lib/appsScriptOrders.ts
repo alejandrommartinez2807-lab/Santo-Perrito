@@ -165,3 +165,29 @@ export async function deleteOrderInAppsScript(orderId: string) {
 
   return data
 }
+
+export async function clearOrdersInAppsScript() {
+  const response = await fetch(getWebAppUrl(), {
+    method: "POST",
+    headers: {
+      "Content-Type": "text/plain;charset=utf-8",
+    },
+    cache: "no-store",
+    body: JSON.stringify({
+      action: "clearOrders",
+      secret: getSecret(),
+    }),
+  })
+
+  const data = await readJsonResponse(response)
+
+  if (!response.ok || data.error) {
+    throw new Error(data.error || "No se pudieron reiniciar los pedidos")
+  }
+
+  return data as {
+    ok: boolean
+    deleted?: number
+    message?: string
+  }
+}
