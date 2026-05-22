@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import {
   AlertTriangle,
   ArrowLeft,
+  BellRing,
   CheckCircle2,
   Clock,
   CookingPot,
@@ -11,13 +12,17 @@ import {
   EyeOff,
   Loader2,
   LogIn,
+  MapPin,
   PackageCheck,
+  Plus,
   RefreshCw,
   Trash2,
   X,
   XCircle,
 } from "lucide-react"
 import { formatUSD, formatVES } from "@/utils/formatCurrency"
+
+type ProductPaymentMode = "divisa" | "mixto"
 
 type CartItem = {
   id: number
@@ -28,6 +33,7 @@ type CartItem = {
   quantity: number
   note?: string
   noteEnabled?: boolean
+  paymentMode?: ProductPaymentMode
 }
 
 type OrderStatus = "Nuevo" | "Preparando" | "Listo" | "Entregado" | "Cancelado"
@@ -43,8 +49,15 @@ type LocalOrder = {
   customerNote: string
   items: CartItem[]
   itemsText: string
+
   totalPrice: number
   totalVES: number
+
+  totalUSD?: number
+  totalCombosUSD?: number
+  totalRegularUSD?: number
+  totalRegularVES?: number
+
   exchangeRate: number
   exchangeSource?: string
   exchangeValueDate?: string
@@ -56,9 +69,28 @@ type ProductSold = {
   quantity: number
   totalUSD: number
   totalVES: number
+  onlyCurrency: boolean
+}
+
+type NewOrderToast = {
+  id: string
+  number: string
+  customerName: string
+  tableNumber: string
+  totalUSD: number
 }
 
 const ADMIN_STORAGE_KEY = "santo_perrito_owner_session"
+const LOCATIONS_STORAGE_KEY = "santo_perrito_order_locations"
+
+const DEFAULT_ORDER_LOCATIONS = [
+  "Mesa 1",
+  "Mesa 2",
+  "Mesa 3",
+  "Mesa 4",
+  "Barra",
+  "Afuera",
+]
 
 const filterOptions: StatusFilter[] = [
   "Activos",
@@ -69,6 +101,50 @@ const filterOptions: StatusFilter[] = [
   "Cancelado",
   "Todos",
 ]
+
+function isComboItem(item: CartItem) {
+  return item.paymentMode === "divisa" || item.category === "Combos"
+}
+
+function getOrderTotals(order: LocalOrder) {
+  const exchangeRate = Number(order.exchangeRate || 0)
+
+  const fallback = order.items.reduce(
+    (totals, item) => {
+      const subtotal = Number(item.price || 0) * Number(item.quantity || 0)
+
+      if (isComboItem(item)) {
+        totals.totalCombosUSD += subtotal
+      } else {
+        totals.totalRegularUSD += subtotal
+      }
+
+      totals.totalUSD += subtotal
+
+      return totals
+    },
+    {
+      totalUSD: 0,
+      totalCombosUSD: 0,
+      totalRegularUSD: 0,
+      totalRegularVES: 0,
+    }
+  )
+
+  fallback.totalRegularVES = fallback.totalRegularUSD * exchangeRate
+
+  const totalUSD = Number(order.totalUSD ?? order.totalPrice ?? fallback.totalUSD)
+  const totalCombosUSD = Number(order.totalCombosUSD ?? fallback.totalCombosUSD)
+  const totalRegularUSD = Number(order.totalRegularUSD ?? fallback.totalRegularUSD)
+  const totalRegularVES = Number(order.totalRegularVES ?? order.totalVES ?? fallback.totalRegularVES)
+
+  return {
+    totalUSD,
+    totalCombosUSD,
+    totalRegularUSD,
+    totalRegularVES,
+  }
+}
 
 async function readApiResponse(response: Response) {
   const text = await response.text()
@@ -235,16 +311,22 @@ function getProductsSoldFromOrders(orders: LocalOrder[]) {
 
   orders.forEach((order) => {
     order.items.forEach((item) => {
+      const subtotalUSD = Number(item.price || 0) * Number(item.quantity || 0)
+      const onlyCurrency = isComboItem(item)
+      const subtotalVES = onlyCurrency ? 0 : subtotalUSD * Number(order.exchangeRate || 0)
+
       const current = productMap.get(item.name) || {
         name: item.name,
         quantity: 0,
         totalUSD: 0,
         totalVES: 0,
+        onlyCurrency,
       }
 
       current.quantity += item.quantity
-      current.totalUSD += item.price * item.quantity
-      current.totalVES += item.price * item.quantity * order.exchangeRate
+      current.totalUSD += subtotalUSD
+      current.totalVES += subtotalVES
+      current.onlyCurrency = current.onlyCurrency && onlyCurrency
 
       productMap.set(item.name, current)
     })
@@ -264,6 +346,7 @@ export default function PedidosPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [highlightedIds, setHighlightedIds] = useState<string[]>([])
+  const [newOrderToast, setNewOrderToast] = useState<NewOrderToast | null>(null)
   const [isCloseModalOpen, setIsCloseModalOpen] = useState(false)
   const [closeSummaryMessage, setCloseSummaryMessage] = useState<string | null>(
     null
@@ -271,12 +354,81 @@ export default function PedidosPage() {
   const [isResetModalOpen, setIsResetModalOpen] = useState(false)
   const [resetConfirmationText, setResetConfirmationText] = useState("")
   const [isResettingDay, setIsResettingDay] = useState(false)
+  const [isLocationsModalOpen, setIsLocationsModalOpen] = useState(false)
+  const [orderLocations, setOrderLocations] = useState<string[]>(
+    DEFAULT_ORDER_LOCATIONS
+  )
+  const [newLocationName, setNewLocationName] = useState("")
+  const [locationsMessage, setLocationsMessage] = useState<string | null>(null)
 
   const knownOrderIdsRef = useRef<Set<string>>(new Set())
   const hasLoadedOnceRef = useRef(false)
   const pendingStatusRef = useRef<Map<string, OrderStatus>>(new Map())
 
   const isLoggedIn = adminPassword.length > 0
+
+  function saveOrderLocations(nextLocations: string[], message?: string) {
+    const cleanLocations = Array.from(
+      new Set(
+        nextLocations
+          .map((location) => location.trim())
+          .filter(Boolean)
+      )
+    )
+
+    const finalLocations = cleanLocations.length > 0 ? cleanLocations : DEFAULT_ORDER_LOCATIONS
+
+    setOrderLocations(finalLocations)
+    window.localStorage.setItem(
+      LOCATIONS_STORAGE_KEY,
+      JSON.stringify(finalLocations)
+    )
+    setLocationsMessage(message || "Ubicaciones actualizadas correctamente.")
+  }
+
+  function addOrderLocation() {
+    const nextLocation = newLocationName.trim()
+
+    if (!nextLocation) {
+      setLocationsMessage("Escribe el nombre de la mesa o ubicación.")
+      return
+    }
+
+    const alreadyExists = orderLocations.some(
+      (location) => location.toLowerCase() === nextLocation.toLowerCase()
+    )
+
+    if (alreadyExists) {
+      setLocationsMessage("Esa ubicación ya existe.")
+      return
+    }
+
+    saveOrderLocations(
+      [...orderLocations, nextLocation],
+      "Ubicación agregada correctamente."
+    )
+    setNewLocationName("")
+  }
+
+  function removeOrderLocation(locationToRemove: string) {
+    if (orderLocations.length <= 1) {
+      setLocationsMessage("Debe quedar al menos una ubicación disponible.")
+      return
+    }
+
+    saveOrderLocations(
+      orderLocations.filter((location) => location !== locationToRemove),
+      "Ubicación eliminada correctamente."
+    )
+  }
+
+  function restoreDefaultOrderLocations() {
+    saveOrderLocations(
+      DEFAULT_ORDER_LOCATIONS,
+      "Ubicaciones restauradas correctamente."
+    )
+    setNewLocationName("")
+  }
 
   async function loadOrders(password = adminPassword, silent = false) {
     if (!password) return
@@ -322,13 +474,29 @@ export default function PedidosPage() {
 
         if (newOrders.length > 0) {
           const newIds = newOrders.map((order) => order.id)
+          const newestOrder = newOrders[0]
+          const newestOrderTotals = getOrderTotals(newestOrder)
 
           setHighlightedIds(newIds)
+          setNewOrderToast({
+            id: newestOrder.id,
+            number: getDisplayOrderNumber(newestOrder),
+            customerName: newestOrder.customerName || "Cliente",
+            tableNumber: newestOrder.tableNumber || "Sin ubicación",
+            totalUSD: newestOrderTotals.totalUSD,
+          })
           playNotificationSound()
 
           window.setTimeout(() => {
             setHighlightedIds([])
+      setNewOrderToast(null)
           }, 12000)
+
+          window.setTimeout(() => {
+            setNewOrderToast((currentToast) =>
+              currentToast?.id === newestOrder.id ? null : currentToast
+            )
+          }, 10000)
         }
       }
 
@@ -371,6 +539,28 @@ export default function PedidosPage() {
   }
 
   useEffect(() => {
+    try {
+      const storedLocations = window.localStorage.getItem(LOCATIONS_STORAGE_KEY)
+
+      if (!storedLocations) return
+
+      const parsedLocations = JSON.parse(storedLocations)
+
+      if (!Array.isArray(parsedLocations)) return
+
+      const cleanLocations = parsedLocations
+        .map((location) => String(location || "").trim())
+        .filter(Boolean)
+
+      if (cleanLocations.length > 0) {
+        setOrderLocations(cleanLocations)
+      }
+    } catch {
+      setOrderLocations(DEFAULT_ORDER_LOCATIONS)
+    }
+  }, [])
+
+  useEffect(() => {
     const savedPassword = window.sessionStorage.getItem(ADMIN_STORAGE_KEY)
 
     if (savedPassword) {
@@ -408,7 +598,7 @@ export default function PedidosPage() {
 
   const totalRegistered = orders
     .filter((order) => order.status !== "Cancelado")
-    .reduce((total, order) => total + order.totalPrice, 0)
+    .reduce((total, order) => total + getOrderTotals(order).totalUSD, 0)
 
   const dayStats = useMemo(() => {
     const today = new Date()
@@ -427,24 +617,42 @@ export default function PedidosPage() {
 
     const activeToday = ordersToday.filter(shouldShowAsActive)
 
-    const deliveredTotalUSD = deliveredToday.reduce(
-      (total, order) => total + order.totalPrice,
-      0
+    const deliveredTotals = deliveredToday.reduce(
+      (totals, order) => {
+        const orderTotals = getOrderTotals(order)
+
+        totals.totalUSD += orderTotals.totalUSD
+        totals.totalCombosUSD += orderTotals.totalCombosUSD
+        totals.totalRegularUSD += orderTotals.totalRegularUSD
+        totals.totalRegularVES += orderTotals.totalRegularVES
+
+        return totals
+      },
+      {
+        totalUSD: 0,
+        totalCombosUSD: 0,
+        totalRegularUSD: 0,
+        totalRegularVES: 0,
+      }
     )
 
-    const deliveredTotalVES = deliveredToday.reduce(
-      (total, order) => total + order.totalVES,
-      0
-    )
+    const activeTotals = activeToday.reduce(
+      (totals, order) => {
+        const orderTotals = getOrderTotals(order)
 
-    const activeTotalUSD = activeToday.reduce(
-      (total, order) => total + order.totalPrice,
-      0
-    )
+        totals.totalUSD += orderTotals.totalUSD
+        totals.totalCombosUSD += orderTotals.totalCombosUSD
+        totals.totalRegularUSD += orderTotals.totalRegularUSD
+        totals.totalRegularVES += orderTotals.totalRegularVES
 
-    const activeTotalVES = activeToday.reduce(
-      (total, order) => total + order.totalVES,
-      0
+        return totals
+      },
+      {
+        totalUSD: 0,
+        totalCombosUSD: 0,
+        totalRegularUSD: 0,
+        totalRegularVES: 0,
+      }
     )
 
     const productsSold = getProductsSoldFromOrders(deliveredToday)
@@ -456,10 +664,8 @@ export default function PedidosPage() {
       deliveredToday,
       canceledToday,
       activeToday,
-      deliveredTotalUSD,
-      deliveredTotalVES,
-      activeTotalUSD,
-      activeTotalVES,
+      deliveredTotals,
+      activeTotals,
       productsSold,
       topProduct,
     }
@@ -468,12 +674,17 @@ export default function PedidosPage() {
   const closeSummaryText = useMemo(() => {
     const productLines =
       dayStats.productsSold.length > 0
-        ? dayStats.productsSold.map(
-            (product) =>
-              `- ${product.name} x${product.quantity} | ${formatUSD(
+        ? dayStats.productsSold.map((product) => {
+            if (product.onlyCurrency) {
+              return `- ${product.name} x${product.quantity} | ${formatUSD(
                 product.totalUSD
-              )} | Bs ${formatVES(product.totalVES)}`
-          )
+              )} | Solo divisas`
+            }
+
+            return `- ${product.name} x${product.quantity} | ${formatUSD(
+              product.totalUSD
+            )} | Bs ${formatVES(product.totalVES)}`
+          })
         : ["- Sin productos entregados"]
 
     return [
@@ -485,11 +696,25 @@ export default function PedidosPage() {
       `Pedidos entregados: ${dayStats.deliveredToday.length}`,
       `Pedidos cancelados: ${dayStats.canceledToday.length}`,
       "",
-      `Ventas confirmadas: ${formatUSD(dayStats.deliveredTotalUSD)}`,
-      `Ventas confirmadas Bs: ${formatVES(dayStats.deliveredTotalVES)}`,
+      "VENTAS CONFIRMADAS",
+      `Total general en divisas: ${formatUSD(dayStats.deliveredTotals.totalUSD)}`,
+      `Combos solo divisas: ${formatUSD(dayStats.deliveredTotals.totalCombosUSD)}`,
+      `Productos normales: ${formatUSD(dayStats.deliveredTotals.totalRegularUSD)}`,
+      `Referencia productos normales Bs: ${formatVES(
+        dayStats.deliveredTotals.totalRegularVES
+      )}`,
       "",
-      `Pendiente por entregar: ${formatUSD(dayStats.activeTotalUSD)}`,
-      `Pendiente por entregar Bs: ${formatVES(dayStats.activeTotalVES)}`,
+      "PENDIENTE POR ENTREGAR",
+      `Total pendiente en divisas: ${formatUSD(dayStats.activeTotals.totalUSD)}`,
+      `Combos pendientes solo divisas: ${formatUSD(
+        dayStats.activeTotals.totalCombosUSD
+      )}`,
+      `Productos normales pendientes: ${formatUSD(
+        dayStats.activeTotals.totalRegularUSD
+      )}`,
+      `Referencia productos normales pendientes Bs: ${formatVES(
+        dayStats.activeTotals.totalRegularVES
+      )}`,
       "",
       "Productos vendidos:",
       ...productLines,
@@ -536,6 +761,7 @@ export default function PedidosPage() {
 
       setOrders([])
       setHighlightedIds([])
+      setNewOrderToast(null)
       setResetConfirmationText("")
       setIsResetModalOpen(false)
       setIsCloseModalOpen(false)
@@ -623,7 +849,7 @@ export default function PedidosPage() {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#fff7e8] px-4 py-8 text-[#220000]">
         <div className="w-full max-w-md overflow-hidden rounded-[2rem] border-4 border-[#a00000] bg-white shadow-[0_12px_0_rgba(160,0,0,0.14)]">
-          <div className="h-6 bg-[linear-gradient(45deg,#a00000_25%,transparent_25%),linear-gradient(-45deg,#a00000_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#a00000_75%),linear-gradient(-45deg,transparent_75%,#a00000_75%)] bg-[length:32px_32px] bg-[position:0_0,0_16px,16px_-16px,-16px_0] bg-[#fff7e8]" />
+          <div className="h-6 bg-[linear-gradient(45deg,#a00000_25%,transparent_25%),linear-gradient(-45deg,#a00000_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#a00000_75%),linear-gradient(-45deg,transparent_75%,#a00000_75%)] bg-[length:32px_32px] bg-[position:0_0,0_16px,16px_-16px,0] bg-[#fff7e8]" />
 
           <div className="px-6 py-6">
             <a
@@ -705,6 +931,41 @@ export default function PedidosPage() {
 
   return (
     <main className="min-h-screen bg-[#fff7e8] px-3 py-4 text-[#220000] sm:px-6 lg:px-8">
+      {newOrderToast && (
+        <div className="fixed right-4 top-4 z-[160] w-[calc(100%-2rem)] max-w-md overflow-hidden rounded-[1.5rem] border-4 border-red-600 bg-white shadow-2xl shadow-red-950/25">
+          <div className="h-4 bg-[linear-gradient(45deg,#a00000_25%,transparent_25%),linear-gradient(-45deg,#a00000_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#a00000_75%),linear-gradient(-45deg,transparent_75%,#a00000_75%)] bg-[length:28px_28px] bg-[position:0_0,0_14px,14px_-14px,0] bg-[#fff7e8]" />
+
+          <div className="flex items-start gap-3 bg-red-50 px-4 py-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 border-red-600 bg-yellow-300 text-red-700">
+              <BellRing size={24} />
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-red-700">
+                Nuevo pedido recibido
+              </p>
+
+              <h2 className="mt-1 text-2xl font-black uppercase leading-none text-[#a00000] drop-shadow-[0_2px_0_rgba(255,211,0,0.75)]">
+                {newOrderToast.number} · {formatUSD(newOrderToast.totalUSD)}
+              </h2>
+
+              <p className="mt-2 text-sm font-black text-[#3a0000]/75">
+                {newOrderToast.customerName} · {newOrderToast.tableNumber}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setNewOrderToast(null)}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 border-red-600 bg-white text-red-700"
+              aria-label="Cerrar notificación"
+            >
+              <X size={18} />
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="mx-auto max-w-7xl">
         <header className="overflow-hidden rounded-[1.6rem] border-4 border-[#a00000] bg-white shadow-[0_10px_0_rgba(160,0,0,0.12)]">
           <div className="h-5 bg-[linear-gradient(45deg,#a00000_25%,transparent_25%),linear-gradient(-45deg,#a00000_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#a00000_75%),linear-gradient(-45deg,transparent_75%,#a00000_75%)] bg-[length:32px_32px] bg-[position:0_0,0_16px,16px_-16px,0] bg-[#fff7e8]" />
@@ -731,6 +992,18 @@ export default function PedidosPage() {
                   >
                     <Clock size={16} />
                     Cierre del día
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLocationsMessage(null)
+                      setIsLocationsModalOpen(true)
+                    }}
+                    className="inline-flex items-center gap-2 rounded-full border-2 border-[#a00000] bg-white px-4 py-2 text-xs font-black uppercase tracking-[0.12em] text-[#a00000] transition hover:bg-yellow-100"
+                  >
+                    <MapPin size={16} />
+                    Mesas / ubicaciones
                   </button>
 
                   <button
@@ -773,7 +1046,11 @@ export default function PedidosPage() {
                   </p>
                 </div>
 
-                <div className="rounded-[1.2rem] border-2 border-red-400 bg-red-50 p-3">
+                <div
+                  className={`rounded-[1.2rem] border-2 border-red-400 bg-red-50 p-3 ${
+                    newOrdersCount > 0 ? "animate-pulse ring-4 ring-red-200" : ""
+                  }`}
+                >
                   <p className="text-[0.62rem] font-black uppercase tracking-[0.16em] text-red-700">
                     Nuevos
                   </p>
@@ -871,6 +1148,9 @@ export default function PedidosPage() {
             {filteredOrders.map((order) => {
               const primaryAction = getPrimaryAction(order.status)
               const isHighlighted = highlightedIds.includes(order.id)
+              const orderTotals = getOrderTotals(order)
+              const comboItems = order.items.filter(isComboItem)
+              const regularItems = order.items.filter((item) => !isComboItem(item))
 
               return (
                 <article
@@ -906,11 +1186,18 @@ export default function PedidosPage() {
 
                       <div className="text-right">
                         <p className="text-3xl font-black leading-none text-[#220000]">
-                          {formatUSD(order.totalPrice)}
+                          {formatUSD(orderTotals.totalUSD)}
                         </p>
-                        <p className="mt-1 text-xs font-black text-[#3a0000]/60">
-                          Bs {formatVES(order.totalVES)}
-                        </p>
+                        {orderTotals.totalRegularVES > 0 && (
+                          <p className="mt-1 text-xs font-black text-[#3a0000]/60">
+                            Ref. normales Bs {formatVES(orderTotals.totalRegularVES)}
+                          </p>
+                        )}
+                        {orderTotals.totalCombosUSD > 0 && (
+                          <p className="mt-1 text-xs font-black uppercase text-[#a00000]">
+                            Combos solo divisas
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -950,32 +1237,123 @@ export default function PedidosPage() {
                         Productos
                       </p>
 
-                      <div className="mt-3 space-y-2">
-                        {order.items.map((item) => (
-                          <div
-                            key={`${order.id}-${item.id}`}
-                            className="flex items-start justify-between gap-3 border-b border-[#a00000]/15 pb-2 last:border-b-0 last:pb-0"
-                          >
-                            <div>
-                              <p className="text-base font-black uppercase leading-tight text-[#220000]">
-                                {item.name}{" "}
-                                <span className="text-[#a00000]">
-                                  x{item.quantity}
-                                </span>
-                              </p>
+                      {comboItems.length > 0 && (
+                        <div className="mt-3 rounded-2xl border-2 border-[#a00000]/20 bg-[#fff7e8] p-3">
+                          <p className="text-[0.65rem] font-black uppercase tracking-[0.16em] text-[#a00000]">
+                            Combos — solo divisas
+                          </p>
 
-                              {item.noteEnabled && item.note && (
-                                <p className="mt-1 text-sm font-bold text-[#3a0000]/65">
-                                  Nota: {item.note}
+                          <div className="mt-3 space-y-2">
+                            {comboItems.map((item) => (
+                              <div
+                                key={`${order.id}-${item.id}-combo`}
+                                className="flex items-start justify-between gap-3 border-b border-[#a00000]/15 pb-2 last:border-b-0 last:pb-0"
+                              >
+                                <div>
+                                  <p className="text-base font-black uppercase leading-tight text-[#220000]">
+                                    {item.name}{" "}
+                                    <span className="text-[#a00000]">
+                                      x{item.quantity}
+                                    </span>
+                                  </p>
+
+                                  <p className="mt-1 text-xs font-black uppercase text-[#a00000]">
+                                    Pago solo en divisas
+                                  </p>
+
+                                  {item.noteEnabled && item.note && (
+                                    <p className="mt-1 text-sm font-bold text-[#3a0000]/65">
+                                      Nota: {item.note}
+                                    </p>
+                                  )}
+                                </div>
+
+                                <p className="shrink-0 text-base font-black text-[#a00000]">
+                                  {formatUSD(item.price * item.quantity)}
                                 </p>
-                              )}
-                            </div>
-
-                            <p className="shrink-0 text-base font-black text-[#a00000]">
-                              {formatUSD(item.price * item.quantity)}
-                            </p>
+                              </div>
+                            ))}
                           </div>
-                        ))}
+                        </div>
+                      )}
+
+                      {regularItems.length > 0 && (
+                        <div className="mt-3 rounded-2xl border-2 border-[#a00000]/20 bg-white p-3">
+                          <p className="text-[0.65rem] font-black uppercase tracking-[0.16em] text-[#a00000]">
+                            Productos normales
+                          </p>
+
+                          <div className="mt-3 space-y-2">
+                            {regularItems.map((item) => {
+                              const subtotalUSD = item.price * item.quantity
+                              const subtotalVES = subtotalUSD * order.exchangeRate
+
+                              return (
+                                <div
+                                  key={`${order.id}-${item.id}-regular`}
+                                  className="flex items-start justify-between gap-3 border-b border-[#a00000]/15 pb-2 last:border-b-0 last:pb-0"
+                                >
+                                  <div>
+                                    <p className="text-base font-black uppercase leading-tight text-[#220000]">
+                                      {item.name}{" "}
+                                      <span className="text-[#a00000]">
+                                        x{item.quantity}
+                                      </span>
+                                    </p>
+
+                                    <p className="mt-1 text-xs font-black text-[#3a0000]/65">
+                                      Ref. Bs {formatVES(subtotalVES)}
+                                    </p>
+
+                                    {item.noteEnabled && item.note && (
+                                      <p className="mt-1 text-sm font-bold text-[#3a0000]/65">
+                                        Nota: {item.note}
+                                      </p>
+                                    )}
+                                  </div>
+
+                                  <p className="shrink-0 text-base font-black text-[#a00000]">
+                                    {formatUSD(subtotalUSD)}
+                                  </p>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="mt-3 rounded-[1.2rem] border-2 border-[#a00000]/25 bg-[#fff7e8] p-3">
+                      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#a00000]">
+                        Resumen de cobro
+                      </p>
+
+                      <div className="mt-3 grid gap-2 text-sm font-black text-[#220000]">
+                        {orderTotals.totalCombosUSD > 0 && (
+                          <p>
+                            Combos solo divisas:{" "}
+                            <span className="text-[#a00000]">
+                              {formatUSD(orderTotals.totalCombosUSD)}
+                            </span>
+                          </p>
+                        )}
+
+                        {orderTotals.totalRegularUSD > 0 && (
+                          <p>
+                            Productos normales:{" "}
+                            <span className="text-[#a00000]">
+                              {formatUSD(orderTotals.totalRegularUSD)}
+                            </span>{" "}
+                            / Bs {formatVES(orderTotals.totalRegularVES)}
+                          </p>
+                        )}
+
+                        <p>
+                          Total en divisas:{" "}
+                          <span className="text-[#a00000]">
+                            {formatUSD(orderTotals.totalUSD)}
+                          </span>
+                        </p>
                       </div>
                     </div>
 
@@ -1107,11 +1485,23 @@ export default function PedidosPage() {
                     Ventas confirmadas
                   </p>
                   <p className="mt-3 text-4xl font-black text-[#220000]">
-                    {formatUSD(dayStats.deliveredTotalUSD)}
+                    {formatUSD(dayStats.deliveredTotals.totalUSD)}
                   </p>
-                  <p className="mt-1 text-sm font-black text-[#3a0000]/65">
-                    Bs {formatVES(dayStats.deliveredTotalVES)}
-                  </p>
+
+                  <div className="mt-3 space-y-1 text-sm font-black text-[#3a0000]/70">
+                    <p>
+                      Combos solo divisas:{" "}
+                      {formatUSD(dayStats.deliveredTotals.totalCombosUSD)}
+                    </p>
+                    <p>
+                      Productos normales:{" "}
+                      {formatUSD(dayStats.deliveredTotals.totalRegularUSD)}
+                    </p>
+                    <p>
+                      Ref. productos normales Bs{" "}
+                      {formatVES(dayStats.deliveredTotals.totalRegularVES)}
+                    </p>
+                  </div>
                 </div>
 
                 <div className="rounded-[1.5rem] border-2 border-yellow-400 bg-yellow-100 p-5">
@@ -1119,11 +1509,23 @@ export default function PedidosPage() {
                     Pendiente por entregar
                   </p>
                   <p className="mt-3 text-4xl font-black text-[#220000]">
-                    {formatUSD(dayStats.activeTotalUSD)}
+                    {formatUSD(dayStats.activeTotals.totalUSD)}
                   </p>
-                  <p className="mt-1 text-sm font-black text-[#3a0000]/65">
-                    Bs {formatVES(dayStats.activeTotalVES)}
-                  </p>
+
+                  <div className="mt-3 space-y-1 text-sm font-black text-[#3a0000]/70">
+                    <p>
+                      Combos pendientes:{" "}
+                      {formatUSD(dayStats.activeTotals.totalCombosUSD)}
+                    </p>
+                    <p>
+                      Productos normales pendientes:{" "}
+                      {formatUSD(dayStats.activeTotals.totalRegularUSD)}
+                    </p>
+                    <p>
+                      Ref. normales pendientes Bs{" "}
+                      {formatVES(dayStats.activeTotals.totalRegularVES)}
+                    </p>
+                  </div>
                 </div>
               </div>
 
@@ -1148,7 +1550,9 @@ export default function PedidosPage() {
                             {product.name}
                           </p>
                           <p className="text-xs font-bold text-[#3a0000]/60">
-                            Bs {formatVES(product.totalVES)}
+                            {product.onlyCurrency
+                              ? "Solo divisas"
+                              : `Bs ${formatVES(product.totalVES)}`}
                           </p>
                         </div>
 
@@ -1244,6 +1648,141 @@ export default function PedidosPage() {
                   Cerrar
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isLocationsModalOpen && (
+        <div className="fixed inset-0 z-[130] flex items-end justify-center bg-[#220000]/60 px-4 py-4 backdrop-blur-sm sm:items-center">
+          <div className="max-h-[94vh] w-full max-w-2xl overflow-y-auto rounded-[2rem] border-4 border-[#a00000] bg-[#fff7e8] text-[#220000] shadow-2xl shadow-black/45">
+            <div className="h-5 bg-[linear-gradient(45deg,#a00000_25%,transparent_25%),linear-gradient(-45deg,#a00000_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#a00000_75%),linear-gradient(-45deg,transparent_75%,#a00000_75%)] bg-[length:32px_32px] bg-[position:0_0,0_16px,16px_-16px,0] bg-[#fff7e8]" />
+
+            <div className="border-b-2 border-[#a00000] bg-white px-6 py-5">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.28em] text-[#a00000]">
+                    Configuración del local
+                  </p>
+
+                  <h2 className="mt-2 text-4xl font-black uppercase leading-none text-[#a00000] drop-shadow-[0_3px_0_rgba(255,211,0,0.75)]">
+                    Mesas y ubicaciones
+                  </h2>
+
+                  <p className="mt-3 text-sm font-bold leading-6 text-[#3a0000]/70">
+                    Estas opciones aparecerán en el carrito cuando se registre un
+                    pedido local. Los clientes no pueden editarlas desde el
+                    carrito.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsLocationsModalOpen(false)
+                    setNewLocationName("")
+                    setLocationsMessage(null)
+                  }}
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 border-[#a00000] bg-yellow-300 text-[#4a0000]"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-4 px-6 py-6">
+              <div className="rounded-[1.4rem] border-2 border-[#a00000] bg-white p-4">
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-[#a00000]">
+                  Agregar ubicación
+                </p>
+
+                <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_auto]">
+                  <input
+                    value={newLocationName}
+                    onChange={(event) => setNewLocationName(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        addOrderLocation()
+                      }
+                    }}
+                    placeholder="Ejemplo: Mesa 5, Terraza, Mostrador..."
+                    className="w-full rounded-2xl border-2 border-[#a00000]/25 bg-[#fff7e8] px-4 py-4 text-base font-bold text-[#4a0000] outline-none placeholder:text-[#4a0000]/45 focus:border-[#a00000]"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={addOrderLocation}
+                    className="inline-flex items-center justify-center gap-2 rounded-full border-2 border-[#a00000] bg-yellow-300 px-6 py-4 text-sm font-black uppercase tracking-[0.12em] text-[#4a0000] shadow-[0_6px_0_rgba(160,0,0,0.18)] transition hover:bg-yellow-200"
+                  >
+                    <Plus size={18} />
+                    Agregar
+                  </button>
+                </div>
+              </div>
+
+              <div className="rounded-[1.4rem] border-2 border-[#a00000]/30 bg-white p-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-[0.18em] text-[#a00000]">
+                      Ubicaciones activas
+                    </p>
+                    <p className="mt-1 text-sm font-bold text-[#3a0000]/65">
+                      {orderLocations.length} opciones disponibles para pedidos
+                      locales.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={restoreDefaultOrderLocations}
+                    className="rounded-full border-2 border-[#a00000] bg-white px-4 py-2.5 text-xs font-black uppercase tracking-[0.12em] text-[#a00000] transition hover:bg-yellow-100"
+                  >
+                    Restaurar defecto
+                  </button>
+                </div>
+
+                <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                  {orderLocations.map((location) => (
+                    <div
+                      key={location}
+                      className="flex items-center justify-between gap-3 rounded-2xl border-2 border-[#a00000]/20 bg-[#fff7e8] px-4 py-3"
+                    >
+                      <span className="text-sm font-black uppercase text-[#220000]">
+                        {location}
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={() => removeOrderLocation(location)}
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 border-red-600 bg-white text-red-700 transition hover:bg-red-100"
+                        aria-label={`Eliminar ${location}`}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {locationsMessage && (
+                <div className="rounded-2xl border-2 border-[#a00000]/25 bg-white px-4 py-3">
+                  <p className="text-sm font-black text-[#a00000]">
+                    {locationsMessage}
+                  </p>
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIsLocationsModalOpen(false)
+                  setNewLocationName("")
+                  setLocationsMessage(null)
+                }}
+                className="w-full rounded-full border-2 border-[#a00000] bg-yellow-300 px-6 py-4 text-sm font-black uppercase tracking-[0.12em] text-[#4a0000] shadow-[0_6px_0_rgba(160,0,0,0.18)]"
+              >
+                Guardar y cerrar
+              </button>
             </div>
           </div>
         </div>

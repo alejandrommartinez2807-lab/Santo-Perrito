@@ -1,3 +1,5 @@
+export type ProductPaymentMode = "divisa" | "mixto"
+
 export type Product = {
   id: number
   name: string
@@ -5,6 +7,7 @@ export type Product = {
   description: string
   price: number
   image: string
+  paymentMode: ProductPaymentMode
 }
 
 export const categories = [
@@ -26,6 +29,7 @@ export const products: Product[] = [
       "4 Perros Clásicos + 1 refresco de 1 litro. Pago en Zelle o efectivo.",
     price: 10,
     image: "/combo-normal.png",
+    paymentMode: "divisa",
   },
   {
     id: 2,
@@ -35,6 +39,7 @@ export const products: Product[] = [
       "4 Santo Cachón + 1 refresco de 2 litros. Pago en Zelle o efectivo.",
     price: 15,
     image: "/combo-cachon.png",
+    paymentMode: "divisa",
   },
 
   // PERRITOS
@@ -46,6 +51,7 @@ export const products: Product[] = [
       "Pan, salchicha, papas, cebolla, ensalada, maíz, queso amarillo y salsas de la casa.",
     price: 3,
     image: "/perroclasico.png",
+    paymentMode: "mixto",
   },
   {
     id: 4,
@@ -55,6 +61,7 @@ export const products: Product[] = [
       "Pan, doble salchicha, papas, cebolla, ensalada, maíz, tocineta, queso amarillo y salsas de la casa.",
     price: 3.5,
     image: "/Santocachon.png",
+    paymentMode: "mixto",
   },
   {
     id: 5,
@@ -64,6 +71,7 @@ export const products: Product[] = [
       "Pan, salchicha, papas, cebolla, salsa de la casa al estilo ranch, salsa estrella a base de tocineta y parmesano, tocineta, queso amarillo o parmesano.",
     price: 3.5,
     image: "/Santoperrito.png",
+    paymentMode: "mixto",
   },
 
   // SALCHIPAPAS
@@ -74,6 +82,7 @@ export const products: Product[] = [
     description: "Papas fritas, salchicha y queso cheddar fundido.",
     price: 5,
     image: "/salchipapa.png",
+    paymentMode: "mixto",
   },
   {
     id: 7,
@@ -83,6 +92,7 @@ export const products: Product[] = [
       "Papas fritas, salchicha, tocineta, queso cheddar y queso amarillo.",
     price: 7,
     image: "/salchipapaespecial.png",
+    paymentMode: "mixto",
   },
 
   // RACIONES
@@ -93,6 +103,7 @@ export const products: Product[] = [
     description: "Nuggets de pollo con papas fritas.",
     price: 5,
     image: "/nuggetspollo.png",
+    paymentMode: "mixto",
   },
   {
     id: 9,
@@ -102,6 +113,7 @@ export const products: Product[] = [
       "Ración de papas fritas doradas y crujientes para acompañar tu pedido.",
     price: 3,
     image: "/papasfritas.png",
+    paymentMode: "mixto",
   },
 
   // BEBIDAS
@@ -112,6 +124,7 @@ export const products: Product[] = [
     description: "Refresco frío en botella para acompañar tu pedido.",
     price: 1,
     image: "/refresco-pequeno.png",
+    paymentMode: "mixto",
   },
   {
     id: 11,
@@ -120,6 +133,7 @@ export const products: Product[] = [
     description: "Refresco de 1 litro ideal para compartir.",
     price: 2,
     image: "/refresco1litros.png",
+    paymentMode: "mixto",
   },
   {
     id: 12,
@@ -128,5 +142,6 @@ export const products: Product[] = [
     description: "Bebida refrescante venezolana.",
     price: 3,
     image: "/nete.png",
+    paymentMode: "mixto",
   },
 ]

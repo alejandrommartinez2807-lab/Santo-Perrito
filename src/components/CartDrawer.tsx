@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import {
   Minus,
   Plus,
@@ -17,6 +17,8 @@ import {
 } from "lucide-react"
 import { formatUSD, formatVES } from "@/utils/formatCurrency"
 
+type ProductPaymentMode = "divisa" | "mixto"
+
 type CartItem = {
   id: number
   name: string
@@ -26,6 +28,7 @@ type CartItem = {
   quantity: number
   note?: string
   noteEnabled?: boolean
+  paymentMode?: ProductPaymentMode
 }
 
 type CartDrawerProps = {
@@ -49,7 +52,24 @@ type OrderType = "Comer aquí" | "Para llevar"
 
 const WHATSAPP_NUMBER = "584227377486"
 
-const QUICK_PLACES = ["Mesa 1", "Mesa 2", "Mesa 3", "Mesa 4", "Barra", "Afuera"]
+const LOCATIONS_STORAGE_KEY = "santo_perrito_order_locations"
+
+const DEFAULT_QUICK_PLACES = [
+  "Mesa 1",
+  "Mesa 2",
+  "Mesa 3",
+  "Mesa 4",
+  "Barra",
+  "Afuera",
+]
+
+function isComboItem(item: CartItem) {
+  return item.paymentMode === "divisa" || item.category === "Combos"
+}
+
+function getItemPaymentMode(item: CartItem): ProductPaymentMode {
+  return isComboItem(item) ? "divisa" : "mixto"
+}
 
 async function readApiResponse(response: Response) {
   const text = await response.text()
@@ -89,18 +109,48 @@ export default function CartDrawer({
   )
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false)
   const [orderError, setOrderError] = useState<string | null>(null)
+  const [quickPlaces, setQuickPlaces] = useState(DEFAULT_QUICK_PLACES)
+
+  useEffect(() => {
+    try {
+      const storedLocations = window.localStorage.getItem(LOCATIONS_STORAGE_KEY)
+
+      if (!storedLocations) return
+
+      const parsedLocations = JSON.parse(storedLocations)
+
+      if (!Array.isArray(parsedLocations)) return
+
+      const cleanLocations = parsedLocations
+        .map((location) => String(location || "").trim())
+        .filter(Boolean)
+
+      if (cleanLocations.length > 0) {
+        setQuickPlaces(cleanLocations)
+      }
+    } catch {
+      setQuickPlaces(DEFAULT_QUICK_PLACES)
+    }
+  }, [])
 
   const hasItems = items.length > 0
 
-  const comboTotalPrice = items
-    .filter((item) => item.category === "Combos")
-    .reduce((total, item) => total + item.price * item.quantity, 0)
+  const comboItems = items.filter(isComboItem)
+  const regularItems = items.filter((item) => !isComboItem(item))
 
-  const regularTotalPrice = items
-    .filter((item) => item.category !== "Combos")
-    .reduce((total, item) => total + item.price * item.quantity, 0)
+  const comboTotalPrice = comboItems.reduce(
+    (total, item) => total + item.price * item.quantity,
+    0
+  )
+
+  const regularTotalPrice = regularItems.reduce(
+    (total, item) => total + item.price * item.quantity,
+    0
+  )
 
   const regularTotalVES = regularTotalPrice * exchangeRate
+  const totalUSD = comboTotalPrice + regularTotalPrice
+
   const hasCombos = comboTotalPrice > 0
   const hasRegularProducts = regularTotalPrice > 0
 
@@ -111,18 +161,27 @@ export default function CartDrawer({
     hasItems && tableNumber.trim().length > 0 && !isSubmittingOrder
 
   function buildWhatsAppMessage() {
-    const lines = items.map((item) => {
+    const comboLines = comboItems.map((item) => {
+      const subtotal = item.price * item.quantity
+
+      const baseLine = `• ${item.name} x${item.quantity} — ${formatUSD(
+        subtotal
+      )} / Solo divisas`
+
+      if (item.noteEnabled && item.note?.trim()) {
+        return `${baseLine}\n  Nota: ${item.note.trim()}`
+      }
+
+      return baseLine
+    })
+
+    const regularLines = regularItems.map((item) => {
       const subtotal = item.price * item.quantity
       const subtotalVES = subtotal * exchangeRate
-      const isCombo = item.category === "Combos"
 
-      const baseLine = isCombo
-        ? `• ${item.name} x${item.quantity} — ${formatUSD(
-            subtotal
-          )} / Pago en divisas`
-        : `• ${item.name} x${item.quantity} — ${formatUSD(
-            subtotal
-          )} / Bs ${formatVES(subtotalVES)}`
+      const baseLine = `• ${item.name} x${item.quantity} — ${formatUSD(
+        subtotal
+      )} / Bs ${formatVES(subtotalVES)}`
 
       if (item.noteEnabled && item.note?.trim()) {
         return `${baseLine}\n  Nota: ${item.note.trim()}`
@@ -137,19 +196,48 @@ export default function CartDrawer({
         }`
       : `Fuente: ${sourceLabel}`
 
-    return encodeURIComponent(
-      `Hola, quiero hacer este pedido en Santo Perrito:\n\n${lines.join(
-        "\n"
-      )}\n\nTotal en divisas: ${formatUSD(totalPrice)}${
-        hasRegularProducts
-          ? `\nProductos normales aprox.: Bs ${formatVES(regularTotalVES)}`
-          : ""
-      }${
-        hasCombos
-          ? `\nCombos: solo pago en divisas.`
-          : ""
-      }\n\nTasa usada: Bs ${formatVES(exchangeRate)}\n${sourceLine}`
-    )
+    const messageParts = [
+      "Hola, quiero hacer este pedido en Santo Perrito:",
+      "",
+    ]
+
+    if (comboLines.length > 0) {
+      messageParts.push("COMBOS — SOLO DIVISAS")
+      messageParts.push(...comboLines)
+      messageParts.push(`Subtotal combos: ${formatUSD(comboTotalPrice)}`)
+      messageParts.push("")
+    }
+
+    if (regularLines.length > 0) {
+      messageParts.push("PRODUCTOS NORMALES")
+      messageParts.push(...regularLines)
+      messageParts.push(
+        `Subtotal productos normales: ${formatUSD(
+          regularTotalPrice
+        )} / Bs ${formatVES(regularTotalVES)}`
+      )
+      messageParts.push("")
+    }
+
+    messageParts.push("TOTAL")
+    messageParts.push(`Total en divisas: ${formatUSD(totalUSD)}`)
+
+    if (hasCombos) {
+      messageParts.push(`Combos solo divisas: ${formatUSD(comboTotalPrice)}`)
+    }
+
+    if (hasRegularProducts) {
+      messageParts.push(
+        `Productos normales: ${formatUSD(regularTotalPrice)} / Bs ${formatVES(
+          regularTotalVES
+        )}`
+      )
+      messageParts.push("")
+      messageParts.push(`Tasa usada: Bs ${formatVES(exchangeRate)}`)
+      messageParts.push(sourceLine)
+    }
+
+    return encodeURIComponent(messageParts.join("\n"))
   }
 
   async function handleRegisterLocalOrder() {
@@ -161,6 +249,11 @@ export default function CartDrawer({
     await new Promise((resolve) => requestAnimationFrame(resolve))
 
     try {
+      const normalizedItems = items.map((item) => ({
+        ...item,
+        paymentMode: getItemPaymentMode(item),
+      }))
+
       const response = await fetch("/api/orders", {
         method: "POST",
         headers: {
@@ -171,13 +264,14 @@ export default function CartDrawer({
           tableNumber: tableNumber.trim(),
           orderType,
           customerNote: customerNote.trim(),
-          items,
+          items: normalizedItems,
           exchangeRate,
           exchangeSource,
           exchangeValueDate,
-          comboTotalPrice,
-          regularTotalPrice,
-          regularTotalVES,
+          totalUSD,
+          totalCombosUSD: comboTotalPrice,
+          totalRegularUSD: regularTotalPrice,
+          totalRegularVES: regularTotalVES,
         }),
       })
 
@@ -250,7 +344,7 @@ export default function CartDrawer({
       />
 
       <aside className="absolute right-0 top-0 flex h-full w-full max-w-xl flex-col overflow-hidden border-l-4 border-[#a00000] bg-[#fff7e8] text-[#220000] shadow-2xl shadow-black/40 sm:w-[92%]">
-        <div className="h-5 shrink-0 bg-[linear-gradient(45deg,#a00000_25%,transparent_25%),linear-gradient(-45deg,#a00000_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#a00000_75%),linear-gradient(-45deg,transparent_75%,#a00000_75%)] bg-[length:32px_32px] bg-[position:0_0,0_16px,16px_-16px,-16px_0] bg-[#fff7e8]" />
+        <div className="h-5 shrink-0 bg-[linear-gradient(45deg,#a00000_25%,transparent_25%),linear-gradient(-45deg,#a00000_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#a00000_75%),linear-gradient(-45deg,transparent_75%,#a00000_75%)] bg-[length:32px_32px] bg-[position:0_0,0_16px,16px_-16px_0] bg-[#fff7e8]" />
 
         <div className="relative shrink-0 overflow-hidden border-b-4 border-[#a00000] bg-white px-5 py-5 sm:px-8">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,211,0,0.32),transparent_42%)]" />
@@ -311,7 +405,7 @@ export default function CartDrawer({
               {items.map((item) => {
                 const itemSubtotal = item.price * item.quantity
                 const itemSubtotalVES = itemSubtotal * exchangeRate
-                const isCombo = item.category === "Combos"
+                const isCombo = isComboItem(item)
                 const canUseNotes = item.category !== "Bebidas"
 
                 return (
@@ -385,7 +479,7 @@ export default function CartDrawer({
 
                             {isCombo ? (
                               <p className="mt-1 text-[0.65rem] font-black uppercase tracking-[0.08em] text-[#a00000]">
-                                Pago en divisas
+                                Solo divisas
                               </p>
                             ) : (
                               <p className="mt-1 text-xs font-black text-[#3a0000]/65">
@@ -434,93 +528,135 @@ export default function CartDrawer({
         </div>
 
         {hasItems && (
-          <div className="shrink-0 border-t-4 border-[#a00000] bg-white px-4 py-3 sm:px-6">
-            <div className="rounded-[1.3rem] border-2 border-[#a00000] bg-[#fff7e8] px-4 py-3 shadow-[0_5px_0_rgba(160,0,0,0.12)]">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-xs font-black uppercase tracking-[0.18em] text-[#a00000]">
-                    Total en divisas
+          <div className="shrink-0 border-t-4 border-[#a00000] bg-white px-4 py-2.5 sm:px-6">
+            <div className="rounded-[1.05rem] border-2 border-[#a00000] bg-[#fff7e8] px-3.5 py-2.5 shadow-[0_4px_0_rgba(160,0,0,0.12)]">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[0.64rem] font-black uppercase tracking-[0.16em] text-[#a00000]">
+                    Total a cobrar
                   </p>
-
-                  {hasRegularProducts && (
-                    <p className="mt-1 text-xs font-black text-[#3a0000]/70">
-                      Productos normales: Bs {formatVES(regularTotalVES)}
-                    </p>
-                  )}
-
-                  {!hasRegularProducts && hasCombos && (
-                    <p className="mt-1 text-xs font-black uppercase tracking-[0.08em] text-[#a00000]">
-                      Combos: solo divisas
-                    </p>
-                  )}
+                  <p className="text-[0.68rem] font-black leading-4 text-[#3a0000]/60">
+                    Total general en divisas
+                  </p>
                 </div>
 
-                <p className="text-3xl font-black leading-none text-[#a00000] drop-shadow-[0_3px_0_rgba(255,211,0,0.75)]">
-                  {formatUSD(totalPrice)}
+                <p className="shrink-0 text-[1.75rem] font-black leading-none text-[#a00000] drop-shadow-[0_3px_0_rgba(255,211,0,0.75)]">
+                  {formatUSD(totalUSD)}
                 </p>
               </div>
 
-              {hasCombos && (
-                <div className="mt-3 rounded-2xl border-2 border-[#a00000]/25 bg-white px-3 py-2">
-                  <p className="text-[0.68rem] font-black uppercase tracking-[0.12em] text-[#a00000]">
-                    Los combos se pagan únicamente en divisas.
-                  </p>
+              {hasCombos && hasRegularProducts ? (
+                <div className="mt-2 grid grid-cols-2 overflow-hidden rounded-[1rem] border border-[#a00000]/20 bg-white">
+                  <div className="border-r border-[#a00000]/15 px-3 py-2">
+                    <p className="text-[0.6rem] font-black uppercase tracking-[0.1em] text-[#a00000]">
+                      Combos
+                    </p>
+
+                    <strong className="block text-sm font-black leading-5 text-[#220000]">
+                      {formatUSD(comboTotalPrice)}
+                    </strong>
+
+                    <p className="text-[0.6rem] font-bold leading-3 text-[#3a0000]/55">
+                      Solo divisas
+                    </p>
+                  </div>
+
+                  <div className="px-3 py-2">
+                    <p className="text-[0.6rem] font-black uppercase tracking-[0.1em] text-[#a00000]">
+                      Normales
+                    </p>
+
+                    <strong className="block text-sm font-black leading-5 text-[#220000]">
+                      {formatUSD(regularTotalPrice)}
+                    </strong>
+
+                    <p className="text-[0.6rem] font-bold leading-3 text-[#3a0000]/55">
+                      Bs {formatVES(regularTotalVES)}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-2 rounded-[1rem] border border-[#a00000]/20 bg-white px-3 py-2">
+                  {hasCombos && (
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-[0.62rem] font-black uppercase tracking-[0.1em] text-[#a00000]">
+                          Combos
+                        </p>
+
+                        <p className="text-[0.62rem] font-bold text-[#3a0000]/55">
+                          Pago solo en divisas
+                        </p>
+                      </div>
+
+                      <strong className="shrink-0 text-sm font-black text-[#220000]">
+                        {formatUSD(comboTotalPrice)}
+                      </strong>
+                    </div>
+                  )}
+
+                  {hasRegularProducts && (
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-[0.62rem] font-black uppercase tracking-[0.1em] text-[#a00000]">
+                          Productos normales
+                        </p>
+
+                        <p className="text-[0.62rem] font-bold leading-4 text-[#3a0000]/55">
+                          {formatUSD(regularTotalPrice)} · Ref. Bs{" "}
+                          {formatVES(regularTotalVES)}
+                        </p>
+                      </div>
+
+                      <strong className="shrink-0 text-sm font-black text-[#220000]">
+                        {formatUSD(regularTotalPrice)}
+                      </strong>
+                    </div>
+                  )}
                 </div>
               )}
 
               {hasRegularProducts && (
-                <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl border-2 border-[#a00000] bg-white px-3 py-2">
+                <div className="mt-1.5 flex items-center justify-between gap-3 rounded-[1rem] border border-[#a00000]/20 bg-white/70 px-3 py-1.5">
                   <div className="min-w-0">
-                    <p className="text-[0.62rem] font-black uppercase tracking-[0.2em] text-[#a00000]">
-                      Tasa Euro BCV
-                    </p>
-
-                    <p className="mt-0.5 truncate text-[0.68rem] font-bold text-[#3a0000]/65">
-                      {exchangeValueDate
-                        ? `Fecha valor: ${exchangeValueDate}`
-                        : "Fecha valor no disponible"}
-                    </p>
-                  </div>
-
-                  <div className="shrink-0 text-right">
-                    <span
-                      className={`mb-1 inline-flex items-center gap-1 rounded-full border border-yellow-300 px-2 py-0.5 text-[0.55rem] font-black uppercase tracking-[0.1em] ${
-                        isOfficialBcv
-                          ? "bg-yellow-300 text-[#4a0000]"
-                          : "bg-orange-400 text-[#4a0000]"
-                      }`}
-                    >
+                    <p className="inline-flex items-center gap-1 text-[0.58rem] font-black uppercase tracking-[0.1em] text-[#a00000]">
                       {isOfficialBcv ? (
                         <BadgeCheck size={11} />
                       ) : (
                         <AlertTriangle size={11} />
                       )}
-                      {sourceLabel}
-                    </span>
-
-                    <p className="text-base font-black leading-none text-[#220000]">
-                      Bs {formatVES(exchangeRate)}
+                      Tasa {sourceLabel}
                     </p>
+
+                    {exchangeValueDate && (
+                      <p className="text-[0.58rem] font-bold leading-3 text-[#3a0000]/55">
+                        {exchangeValueDate}
+                      </p>
+                    )}
                   </div>
+
+                  <strong className="shrink-0 text-sm font-black text-[#220000]">
+                    Bs {formatVES(exchangeRate)}
+                  </strong>
                 </div>
               )}
 
               {exchangeWarning && hasRegularProducts && (
-                <div className="mt-2 rounded-xl border border-orange-400/35 bg-orange-100 px-3 py-2">
-                  <p className="text-[0.68rem] font-bold leading-4 text-[#7a2e00]">
+                <div className="mt-1.5 rounded-xl border border-orange-400/35 bg-orange-100 px-3 py-1.5">
+                  <p className="text-[0.62rem] font-bold leading-4 text-[#7a2e00]">
                     {exchangeWarning}
                   </p>
                 </div>
               )}
             </div>
 
-            <div className="mt-3 grid gap-2">
+            <div className="mt-2 grid gap-2">
               <button
                 type="button"
                 onClick={() => setIsOrderModalOpen(true)}
-                className="flex w-full items-center justify-center gap-2 rounded-full border-2 border-[#a00000] bg-yellow-300 px-5 py-3 text-xs font-black uppercase tracking-[0.12em] text-[#4a0000] shadow-[0_4px_0_rgba(160,0,0,0.18)] transition hover:bg-yellow-200 active:translate-y-1 active:shadow-none"
+                className="flex w-full items-center justify-center gap-2 rounded-full border-2 border-[#a00000] bg-yellow-300 px-5 py-2.5 text-xs font-black uppercase tracking-[0.12em] text-[#4a0000] shadow-[0_4px_0_rgba(160,0,0,0.18)] transition hover:bg-yellow-200 active:translate-y-1 active:shadow-none"
               >
-                <Store size={18} />
+                <Store size={17} />
                 Registrar pedido local
               </button>
 
@@ -528,9 +664,9 @@ export default function CartDrawer({
                 href={whatsappHref}
                 target="_blank"
                 rel="noreferrer"
-                className="flex w-full items-center justify-center gap-2 rounded-full border-2 border-[#a00000] bg-[#a00000] px-5 py-3 text-xs font-black uppercase tracking-[0.12em] text-white shadow-[0_4px_0_rgba(160,0,0,0.18)] transition hover:bg-yellow-300 hover:text-[#4a0000] active:translate-y-1 active:shadow-none"
+                className="flex w-full items-center justify-center gap-2 rounded-full border-2 border-[#a00000] bg-[#a00000] px-5 py-2.5 text-xs font-black uppercase tracking-[0.12em] text-white shadow-[0_4px_0_rgba(160,0,0,0.18)] transition hover:bg-yellow-300 hover:text-[#4a0000] active:translate-y-1 active:shadow-none"
               >
-                <MessageCircle size={18} />
+                <MessageCircle size={17} />
                 Enviar por WhatsApp
               </a>
             </div>
@@ -541,7 +677,7 @@ export default function CartDrawer({
       {isOrderModalOpen && (
         <div className="fixed inset-0 z-[110] flex items-end justify-center bg-[#220000]/60 px-4 py-4 backdrop-blur-sm sm:items-center">
           <div className="max-h-[94vh] w-full max-w-lg overflow-y-auto rounded-[2rem] border-4 border-[#a00000] bg-[#fff7e8] text-[#220000] shadow-2xl shadow-black/45">
-            <div className="h-5 bg-[linear-gradient(45deg,#a00000_25%,transparent_25%),linear-gradient(-45deg,#a00000_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#a00000_75%),linear-gradient(-45deg,transparent_75%,#a00000_75%)] bg-[length:32px_32px] bg-[position:0_0,0_16px,16px_-16px,-16px_0] bg-[#fff7e8]" />
+            <div className="h-5 bg-[linear-gradient(45deg,#a00000_25%,transparent_25%),linear-gradient(-45deg,#a00000_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#a00000_75%),linear-gradient(-45deg,transparent_75%,#a00000_75%)] bg-[length:32px_32px] bg-[position:0_0,0_16px,16px_-16px_0] bg-[#fff7e8]" />
 
             <div className="relative bg-white px-6 py-5">
               <div className="flex items-start justify-between gap-4">
@@ -634,7 +770,7 @@ export default function CartDrawer({
                   </label>
 
                   <div className="mt-2 grid grid-cols-3 gap-2">
-                    {QUICK_PLACES.map((place) => (
+                    {quickPlaces.map((place) => (
                       <button
                         key={place}
                         type="button"
@@ -659,6 +795,11 @@ export default function CartDrawer({
                     placeholder="O escribe otra ubicación..."
                     className="mt-3 w-full rounded-2xl border-2 border-[#a00000]/25 bg-white px-4 py-4 text-base font-bold text-[#4a0000] outline-none placeholder:text-[#4a0000]/45 focus:border-[#a00000]"
                   />
+
+                  <p className="mt-2 text-[0.68rem] font-bold text-[#3a0000]/55">
+                    Las mesas y ubicaciones se administran desde el panel del
+                    local.
+                  </p>
                 </div>
 
                 <div>
@@ -683,6 +824,40 @@ export default function CartDrawer({
                         </button>
                       )
                     )}
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border-2 border-[#a00000]/25 bg-white px-4 py-3">
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-[#a00000]">
+                    Resumen de cobro
+                  </p>
+
+                  <div className="mt-3 space-y-2 text-sm font-black text-[#220000]">
+                    {hasCombos && (
+                      <p>
+                        Combos solo divisas:{" "}
+                        <span className="text-[#a00000]">
+                          {formatUSD(comboTotalPrice)}
+                        </span>
+                      </p>
+                    )}
+
+                    {hasRegularProducts && (
+                      <p>
+                        Productos normales:{" "}
+                        <span className="text-[#a00000]">
+                          {formatUSD(regularTotalPrice)}
+                        </span>{" "}
+                        / Bs {formatVES(regularTotalVES)}
+                      </p>
+                    )}
+
+                    <p>
+                      Total en divisas:{" "}
+                      <span className="text-[#a00000]">
+                        {formatUSD(totalUSD)}
+                      </span>
+                    </p>
                   </div>
                 </div>
 

@@ -5,6 +5,8 @@ export type OrderStatus =
   | "Entregado"
   | "Cancelado"
 
+export type ProductPaymentMode = "divisa" | "mixto"
+
 export type OrderItem = {
   id: number
   name: string
@@ -14,6 +16,7 @@ export type OrderItem = {
   quantity: number
   note?: string
   noteEnabled?: boolean
+  paymentMode?: ProductPaymentMode
 }
 
 export type LocalOrder = {
@@ -26,8 +29,15 @@ export type LocalOrder = {
   customerNote: string
   items: OrderItem[]
   itemsText: string
+
   totalPrice: number
   totalVES: number
+
+  totalUSD?: number
+  totalCombosUSD?: number
+  totalRegularUSD?: number
+  totalRegularVES?: number
+
   exchangeRate: number
   exchangeSource?: string
   exchangeValueDate?: string
